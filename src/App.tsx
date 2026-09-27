@@ -237,15 +237,18 @@ export default function App() {
     notifications?: Notification[];
     announcements?: any[];
   }) => {
-    const nextTasks = updates.tasks !== undefined ? updates.tasks : tasks;
-    const nextMembers = updates.members !== undefined ? updates.members : members;
-    const nextEvents = updates.events !== undefined ? updates.events : events;
-    const nextPolls = updates.polls !== undefined ? updates.polls : polls;
-    const nextComments = updates.comments !== undefined ? updates.comments : comments;
-    const nextNotifications = updates.notifications !== undefined ? updates.notifications : notifications;
-    const nextAnnouncements = updates.announcements !== undefined ? updates.announcements : announcements;
-
     try {
+      const latestResponse = await fetch("/api/state");
+      const latestState = latestResponse.ok ? await latestResponse.json() : null;
+
+      const nextTasks = updates.tasks !== undefined ? updates.tasks : latestState?.tasks ?? tasks;
+      const nextMembers = updates.members !== undefined ? updates.members : latestState?.members ?? members;
+      const nextEvents = updates.events !== undefined ? updates.events : latestState?.events ?? events;
+      const nextPolls = updates.polls !== undefined ? updates.polls : latestState?.polls ?? polls;
+      const nextComments = updates.comments !== undefined ? updates.comments : latestState?.comments ?? comments;
+      const nextNotifications = updates.notifications !== undefined ? updates.notifications : latestState?.notifications ?? notifications;
+      const nextAnnouncements = updates.announcements !== undefined ? updates.announcements : latestState?.announcements ?? announcements;
+
       await fetch("/api/state", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -770,6 +773,7 @@ export default function App() {
       ? `=HYPERLINK("${formDocLink}", "${formTitle}")` 
       : "";
 
+    const selectedArtist = layoutArtistOptions.find((option) => option.value === formArtist);
     const created: Task = {
       id: `task-${Date.now()}`,
       title: formTitle,
@@ -777,6 +781,8 @@ export default function App() {
       typeOfContent: formContentType,
       writer: formWriter || "Unspecified Writer",
       illusLayout: resolvedFormArtist,
+      assigneeEmail: selectedArtist?.email || "",
+      assigneeName: selectedArtist?.label || resolvedFormArtist,
       progress: resolvedFormArtist === "Unassigned" ? "Not Started" : "Assigned",
       writeup: formWriteup || formTitle || "drafting",
       priority: formPriority,

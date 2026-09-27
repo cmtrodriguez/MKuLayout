@@ -91,6 +91,8 @@ export interface Task {
   typeOfContent: string; // e.g. "feats artx", "op artx", "cult artx", "editorial", "illustration", "photo essay"
   writer: string;
   illusLayout: string; // E.g., "Christian", "Leyan"
+  assigneeEmail?: string; // canonical member email used for cross-device matching
+  assigneeName?: string; // canonical assigned name label
   graphics?: string; // E.g., "Carl", "Zam"
   progress: TaskStatus;
   writeup: string;

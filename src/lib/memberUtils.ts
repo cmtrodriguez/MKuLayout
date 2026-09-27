@@ -194,14 +194,21 @@ export function getOfficialFullName(name?: string | null, email?: string | null)
 /**
  * Checks if a task is assigned to a specific staff member
  */
-export function isUserAssignedToTask(task: { illusLayout?: string; graphics?: string; writer?: string }, userName: string, userEmail: string): boolean {
+export function isUserAssignedToTask(task: { illusLayout?: string; graphics?: string; writer?: string; assigneeEmail?: string; assigneeName?: string }, userName: string, userEmail: string): boolean {
+  const normalizedUserEmail = userEmail?.trim().toLowerCase();
+  const normalizedTaskEmail = task.assigneeEmail?.trim().toLowerCase();
+
+  if (normalizedUserEmail && normalizedTaskEmail && normalizedUserEmail === normalizedTaskEmail) {
+    return true;
+  }
+
   const preferred = getPreferredFirstName(userName, userEmail).toLowerCase();
-  const rawTarget = `${task.illusLayout || ""} ${task.graphics || ""}`.toLowerCase();
+  const rawTarget = `${task.illusLayout || ""} ${task.assigneeName || ""} ${task.graphics || ""}`.toLowerCase();
 
   if (rawTarget.includes(preferred)) return true;
 
-  if (userEmail) {
-    const info = OFFICIAL_MEMBERS_MAP[userEmail.toLowerCase()];
+  if (normalizedUserEmail) {
+    const info = OFFICIAL_MEMBERS_MAP[normalizedUserEmail];
     if (info) {
       const lastName = info.officialName.split(",")[0].toLowerCase();
       if (rawTarget.includes(lastName)) return true;
