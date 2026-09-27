@@ -1,0 +1,6 @@
+{
+  "name": "MKuLayout",
+  "description": "Accessible Task Organizer & Team Workflow Dashboard for a Student Publication Layout Team",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
