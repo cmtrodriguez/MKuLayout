@@ -20,6 +20,7 @@ import ProfileSettings from "./components/ProfileSettings";
 import { LayoutStaffDashboard, EicDashboard } from "./components/RoleDashboards";
 import { CanvaDirectory } from "./components/CanvaDirectory";
 import { OFFICIAL_MEMBERS_MAP, getPreferredFirstName } from "./lib/memberUtils";
+import { supabase, fetchUserProfileByEmail } from "./lib/supabase";
 import mkuleImg from "./mkule.png";
 
 // Domain Models
@@ -276,17 +277,73 @@ export default function App() {
     pushStateToBackend({ comments: updated });
   };
 
-  const handleLogin = (role: UserRole, name: string, email: string) => {
-    setUserRole(role);
-    setUserName(name);
-    setUserEmail(normalizeEmail(email));
+  const applyAuthenticatedUser = async (email: string, fallbackRole: UserRole, fallbackName: string) => {
+    const normalizedEmail = normalizeEmail(email);
+    const profile = await fetchUserProfileByEmail(normalizedEmail);
+
+    const resolvedRole = (profile?.role as UserRole | undefined) ?? fallbackRole;
+    const resolvedName = profile?.full_name || fallbackName || normalizedEmail;
+
+    setUserRole(resolvedRole);
+    setUserName(resolvedName);
+    setUserEmail(normalizedEmail);
     setIsAuthenticated(true);
     setActiveTab("dashboard");
   };
 
-  const handleLogout = () => {
-    setIsAuthenticated(false);
+  const handleLogin = async (role: UserRole, name: string, email: string) => {
+    await applyAuthenticatedUser(email, role, name);
   };
+
+  const handleLogout = async () => {
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
+    setIsAuthenticated(false);
+    setUserRole("Layout Staff Member");
+    setUserEmail("");
+    setUserName("");
+  };
+
+  useEffect(() => {
+    if (!supabase) return;
+
+    let active = true;
+
+    const restoreSupabaseSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!active || !data.session?.user?.email) return;
+      await applyAuthenticatedUser(
+        data.session.user.email,
+        "Layout Staff Member",
+        data.session.user.user_metadata?.full_name || data.session.user.email,
+      );
+    };
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!active || !session?.user?.email) {
+        if (!active) return;
+        setIsAuthenticated(false);
+        setUserRole("Layout Staff Member");
+        setUserEmail("");
+        setUserName("");
+        return;
+      }
+
+      await applyAuthenticatedUser(
+        session.user.email,
+        "Layout Staff Member",
+        session.user.user_metadata?.full_name || session.user.email,
+      );
+    });
+
+    void restoreSupabaseSession();
+
+    return () => {
+      active = false;
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
 
   const handleAddCommentSimple = (commentText: string, taskId: string) => {
     const newComment: TaskComment = {

@@ -3,10 +3,77 @@ import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
+import { createClient } from "@supabase/supabase-js";
 
 // Ensure we load environment variables
 import dotenv from "dotenv";
 dotenv.config();
+
+const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+const supabase = supabaseUrl && supabaseServiceKey
+  ? createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    })
+  : null;
+
+async function syncSupabaseState(data: any) {
+  if (!supabase) return;
+
+  try {
+    const { error } = await supabase.from("app_state").upsert(
+      {
+        id: "app-state",
+        content: data,
+        updated_at: new Date().toISOString()
+      },
+      { onConflict: "id" }
+    );
+
+    if (error) {
+      console.warn("Supabase sync warning:", error.message);
+    }
+  } catch (err) {
+    console.warn("Supabase sync failed:", err);
+  }
+}
+
+async function readSupabaseState() {
+  if (!supabase) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from("app_state")
+      .select("content")
+      .eq("id", "app-state")
+      .maybeSingle();
+
+    if (error && error.code !== "PGRST116") {
+      console.warn("Supabase read warning:", error.message);
+      return null;
+    }
+
+    if (!data?.content) {
+      return null;
+    }
+
+    return typeof data.content === "string" ? JSON.parse(data.content) : data.content;
+  } catch (err) {
+    console.warn("Supabase read failed:", err);
+    return null;
+  }
+}
+
+async function ensureSupabaseStateSeed() {
+  if (!supabase) return;
+
+  const seeded = readDb();
+  await syncSupabaseState(seeded);
+}
 
 const app = express();
 const DEFAULT_PORT = Number(process.env.PORT || 3000);
@@ -93,8 +160,19 @@ function writeDb(data: any) {
 }
 
 // 1. Get database state
-app.get("/api/state", (req, res) => {
-  res.json(readDb());
+app.get("/api/state", async (req, res) => {
+  const supabaseState = await readSupabaseState();
+  const fallbackState = readDb();
+
+  if (supabaseState) {
+    return res.json(supabaseState);
+  }
+
+  if (supabase) {
+    await syncSupabaseState(fallbackState);
+  }
+
+  res.json(fallbackState);
 });
 
 // 1b. Get personal calendar events for a specific user
@@ -110,7 +188,7 @@ app.get("/api/personal-events", (req, res) => {
 });
 
 // 1c. Add or update personal event for a specific user
-app.post("/api/personal-events", (req, res) => {
+app.post("/api/personal-events", async (req, res) => {
   const event = req.body;
   if (!event || !event.userEmail || !event.title || !event.date) {
     return res.status(400).json({ error: "Missing required event fields (userEmail, title, date)" });
@@ -130,11 +208,14 @@ app.post("/api/personal-events", (req, res) => {
     });
   }
   writeDb(db);
+  if (supabase) {
+    await syncSupabaseState(db);
+  }
   res.json({ status: "success", event });
 });
 
 // 1d. Delete personal event for a specific user
-app.delete("/api/personal-events/:id", (req, res) => {
+app.delete("/api/personal-events/:id", async (req, res) => {
   const eventId = req.params.id;
   const email = (req.query.email as string || "").trim().toLowerCase();
   const db = readDb();
@@ -151,13 +232,17 @@ app.delete("/api/personal-events/:id", (req, res) => {
     return true;
   });
   writeDb(db);
+  if (supabase) {
+    await syncSupabaseState(db);
+  }
   res.json({ status: "success" });
 });
 
 // 2. Save database state
-app.post("/api/state", (req, res) => {
+app.post("/api/state", async (req, res) => {
   const success = writeDb(req.body);
   if (success) {
+    await syncSupabaseState(req.body);
     res.json({ status: "success", data: req.body });
   } else {
     res.status(500).json({ error: "Failed to write database" });

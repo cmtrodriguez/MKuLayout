@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { motion } from "motion/react";
 import { ArrowRight, Key, AlertCircle, Volume2, VolumeX, Shield, Mail, Sun, Moon, Users, Check, Copy, ChevronDown, ChevronUp, ShieldCheck } from "lucide-react";
 import { UserRole, TeamMember, normalizeEmail } from "../types";
+import { supabase } from "../lib/supabase";
 import mkuleImg from "../mkule.png";
 
 interface LoginPageProps {
@@ -121,7 +122,7 @@ export default function LoginPage({ members, onLogin, speechEnabled, darkMode = 
   const [pinInput, setPinInput] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
-  const handleManualLoginSubmit = (e: React.FormEvent) => {
+  const handleManualLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
 
@@ -138,7 +139,30 @@ export default function LoginPage({ members, onLogin, speechEnabled, darkMode = 
       return;
     }
 
-    // Match against registry
+    if (supabase) {
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: trimmedEmail,
+          password: trimmedPin,
+        });
+
+        if (!error && data.user) {
+          const userEmail = normalizeEmail(data.user.email || trimmedEmail);
+          const matchedAccount = OFFICIAL_ACCOUNTS.find((acc) => acc.email.toLowerCase() === userEmail.toLowerCase());
+          const memberMatch = members.find((m) => normalizeEmail(m.email).toLowerCase() === userEmail.toLowerCase());
+
+          onLogin(
+            (matchedAccount?.role ?? memberMatch?.role ?? "Layout Staff Member") as UserRole,
+            (matchedAccount?.name ?? memberMatch?.name ?? data.user.user_metadata?.full_name ?? userEmail),
+            userEmail,
+          );
+          return;
+        }
+      } catch (signInError) {
+        console.warn("Supabase sign-in failed; falling back to manual account registry:", signInError);
+      }
+    }
+
     const matchedAccount = OFFICIAL_ACCOUNTS.find((acc) => {
       const accEmail = acc.email.toLowerCase();
       const accHandle = accEmail.split("@")[0];
@@ -159,16 +183,16 @@ export default function LoginPage({ members, onLogin, speechEnabled, darkMode = 
 
     if (matchedAccount) {
       onLogin(matchedAccount.role, matchedAccount.name, matchedAccount.email);
-    } else {
-      // General fallbacks from the database
-      const memberMatch = members.find((m) => normalizeEmail(m.email).toLowerCase() === trimmedEmail || m.email.toLowerCase() === trimmedEmail);
-      if (memberMatch) {
-        onLogin(memberMatch.role as UserRole, memberMatch.name, normalizeEmail(memberMatch.email));
-        return;
-      }
-
-      setErrorMsg("Invalid credentials. Please verify your email and password.");
+      return;
     }
+
+    const memberMatch = members.find((m) => normalizeEmail(m.email).toLowerCase() === trimmedEmail || m.email.toLowerCase() === trimmedEmail);
+    if (memberMatch) {
+      onLogin(memberMatch.role as UserRole, memberMatch.name, normalizeEmail(memberMatch.email));
+      return;
+    }
+
+    setErrorMsg("Invalid credentials. Please verify your email and password.");
   };
 
   return (
