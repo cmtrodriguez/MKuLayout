@@ -192,11 +192,15 @@ export default function App() {
     ? formArtist
     : "Unassigned";
 
-  // Fetch initial backend state
+  // Fetch backend state on load and keep it synced across devices while the app stays open
   useEffect(() => {
     const fetchState = async () => {
       try {
         const response = await fetch("/api/state");
+        if (!response.ok) {
+          throw new Error(`State fetch failed with ${response.status}`);
+        }
+
         const data = await response.json();
         setTasks(data.tasks || []);
         setMembers(data.members || []);
@@ -211,7 +215,16 @@ export default function App() {
         setLoading(false);
       }
     };
+
     fetchState();
+
+    const syncInterval = window.setInterval(() => {
+      fetchState();
+    }, 5000);
+
+    return () => {
+      window.clearInterval(syncInterval);
+    };
   }, []);
 
   // Save changes to backend
