@@ -20,7 +20,7 @@ import ProfileSettings from "./components/ProfileSettings";
 import { LayoutStaffDashboard, EicDashboard } from "./components/RoleDashboards";
 import { CanvaDirectory } from "./components/CanvaDirectory";
 import { OFFICIAL_MEMBERS_MAP, getPreferredFirstName } from "./lib/memberUtils";
-import mkuleImg from "mkule.png";
+import mkuleImg from "./mkule.png";
 
 // Domain Models
 import { Task, TeamMember, CalendarEvent, Poll, Notification, TaskComment, UserRole, normalizeEmail } from "./types";
