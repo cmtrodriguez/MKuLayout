@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { 
   LayoutGrid, FileSpreadsheet, Kanban, GraduationCap, Calendar, 
@@ -31,6 +31,10 @@ export default function App() {
   
   // Data State
   const [tasks, setTasks] = useState<Task[]>([]);
+  // Mirror of `tasks` kept in sync so commitTasks can compute the next list from the
+  // latest value even when several mutations land in the same render batch.
+  const tasksRef = useRef<Task[]>(tasks);
+  tasksRef.current = tasks;
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [polls, setPolls] = useState<Poll[]>([]);
@@ -57,6 +61,9 @@ export default function App() {
   ];
 
   const [issueSheets, setIssueSheets] = useState<Array<{ id: string; title: string; rows: Array<{ id: string; page: string; section: string; title: string; writer: string; graphics: string; layout: string; online: string; progress: string }> }>>(() => {
+    // Issue sheets are shared team data, so the backend copy (loaded in the
+    // fetch effect below) is authoritative. Local storage is only a seed cache
+    // so the first paint is not empty before the network round-trip.
     try {
       const saved = localStorage.getItem("mkule_issue_publication_sheets");
       if (saved) {
@@ -68,6 +75,21 @@ export default function App() {
     }
     return [{ id: "issue-sheet-1", title: "Issue Publication Sheet", rows: issueSheetTemplate }];
   });
+  const issueSheetsRef = useRef(issueSheets);
+  issueSheetsRef.current = issueSheets;
+
+  // Persist issue sheets to the shared backend so every account sees the same rows.
+  const persistIssueSheets = (sheets: typeof issueSheets) => {
+    setIssueSheets(sheets);
+    issueSheetsRef.current = sheets;
+    localStorage.setItem("mkule_issue_publication_sheets", JSON.stringify(sheets));
+    pushStateToBackend({ issueSheets: sheets });
+  };
+
+  // Functional-updater form that always computes from the freshest ref and persists.
+  const updateIssueSheets = (updater: (prev: typeof issueSheets) => typeof issueSheets) => {
+    persistIssueSheets(updater(issueSheetsRef.current));
+  };
   const [currentIssueSheetId, setCurrentIssueSheetId] = useState(() => {
     try {
       const saved = localStorage.getItem("mkule_issue_publication_current_sheet");
@@ -209,6 +231,12 @@ export default function App() {
         setComments(data.comments || []);
         setAnnouncements(data.announcements || []);
         setNotifications(data.notifications || []);
+        // Adopt the shared issue-publication sheets from the backend so all
+        // accounts render the same rows, and keep the local cache in step.
+        if (Array.isArray(data.issueSheets) && data.issueSheets.length > 0) {
+          setIssueSheets(data.issueSheets);
+          localStorage.setItem("mkule_issue_publication_sheets", JSON.stringify(data.issueSheets));
+        }
       } catch (err) {
         console.error("Failed to load initial layout state", err);
       } finally {
@@ -236,6 +264,7 @@ export default function App() {
     comments?: TaskComment[];
     notifications?: Notification[];
     announcements?: any[];
+    issueSheets?: typeof issueSheets;
   }) => {
     try {
       const latestResponse = await fetch("/api/state");
@@ -248,6 +277,7 @@ export default function App() {
       const nextComments = updates.comments !== undefined ? updates.comments : latestState?.comments ?? comments;
       const nextNotifications = updates.notifications !== undefined ? updates.notifications : latestState?.notifications ?? notifications;
       const nextAnnouncements = updates.announcements !== undefined ? updates.announcements : latestState?.announcements ?? announcements;
+      const nextIssueSheets = updates.issueSheets !== undefined ? updates.issueSheets : latestState?.issueSheets ?? issueSheetsRef.current;
 
       await fetch("/api/state", {
         method: "POST",
@@ -259,7 +289,8 @@ export default function App() {
           polls: nextPolls,
           comments: nextComments,
           notifications: nextNotifications,
-          announcements: nextAnnouncements
+          announcements: nextAnnouncements,
+          issueSheets: nextIssueSheets
         })
       });
     } catch (err) {
@@ -270,6 +301,17 @@ export default function App() {
   const handleUpdateTasks = (newTasks: Task[]) => {
     setTasks(newTasks);
     pushStateToBackend({ tasks: newTasks });
+  };
+
+  // Compute the next task list from current state and persist it to the backend.
+  // Used by every mutation path so no task change is lost on refresh.
+  const commitTasks = (updater: Task[] | ((prev: Task[]) => Task[])) => {
+    const nextTasks = typeof updater === "function"
+      ? (updater as (prev: Task[]) => Task[])(tasksRef.current)
+      : updater;
+    tasksRef.current = nextTasks;
+    setTasks(nextTasks);
+    pushStateToBackend({ tasks: nextTasks });
   };
 
   const handleUpdateMembers = (newMembers: TeamMember[]) => {
@@ -520,7 +562,7 @@ export default function App() {
   };
 
   const updateIssueRow = (id: string, field: "page" | "section" | "title" | "writer" | "graphics" | "layout" | "online" | "progress", value: string) => {
-    setIssueSheets((prev) => prev.map((sheet) => {
+    updateIssueSheets((prev) => prev.map((sheet) => {
       if (sheet.id !== currentIssueSheetId) return sheet;
       return {
         ...sheet,
@@ -532,7 +574,7 @@ export default function App() {
   const syncIssueRowTask = (row: { id: string; page: string; section: string; title: string; writer: string; graphics: string; layout: string; online: string; progress: string }) => {
     const rowTitle = row.title?.trim() || `${row.section || "Issue"}${row.page ? ` ${row.page}` : ""}`.trim() || `Issue Row ${row.id}`;
     if (!row.layout && !row.online && !row.title && !row.writer) {
-      setTasks((prev) => prev.filter((task: any) => task.sourceIssueRowId !== row.id));
+      commitTasks((prev) => prev.filter((task: any) => task.sourceIssueRowId !== row.id));
       return;
     }
 
@@ -564,7 +606,7 @@ export default function App() {
       sourceIssueRowId: row.id,
     } as Task & { sourceIssueRowId?: string };
 
-    setTasks((prev) => {
+    commitTasks((prev) => {
       const filtered = prev.filter((task: any) => task.sourceIssueRowId !== row.id);
       return [newTask, ...filtered];
     });
@@ -583,7 +625,7 @@ export default function App() {
       progress: "Pending"
     };
 
-    setIssueSheets((prev) => prev.map((sheet) => {
+    updateIssueSheets((prev) => prev.map((sheet) => {
       if (sheet.id !== currentIssueSheetId) return sheet;
       return { ...sheet, rows: [...sheet.rows, nextRow] };
     }));
@@ -597,13 +639,14 @@ export default function App() {
   const saveIssueRowEditor = () => {
     if (!editingIssueRowId || !issueRowDraft) return;
 
-    setIssueSheets((prev) => prev.map((sheet) => {
+    const nextSheets = issueSheetsRef.current.map((sheet) => {
       if (sheet.id !== currentIssueSheetId) return sheet;
       return {
         ...sheet,
         rows: sheet.rows.map((row) => row.id === editingIssueRowId ? { ...issueRowDraft } : row)
       };
-    }));
+    });
+    persistIssueSheets(nextSheets);
 
     const rowTitle = issueRowDraft.title?.trim() || `${issueRowDraft.section || "Issue"}${issueRowDraft.page ? ` ${issueRowDraft.page}` : ""}`.trim() || `Issue Row ${issueRowDraft.id}`;
     const assignee = issueRowDraft.online?.trim() || issueRowDraft.layout?.trim() || "Unassigned";
@@ -633,7 +676,7 @@ export default function App() {
       sourceIssueRowId: issueRowDraft.id,
     };
 
-    setTasks((prev) => {
+    commitTasks((prev) => {
       const filtered = prev.filter((task: any) => task.sourceIssueRowId !== issueRowDraft.id && task.id !== `issue-pending-${issueRowDraft.id}`);
       return [newPendingTask, ...filtered];
     });
@@ -643,12 +686,12 @@ export default function App() {
   };
 
   const deleteIssueRow = (rowId: string) => {
-    setIssueSheets((prev) => prev.map((sheet) => {
+    updateIssueSheets((prev) => prev.map((sheet) => {
       if (sheet.id !== currentIssueSheetId) return sheet;
       return { ...sheet, rows: sheet.rows.filter((row) => row.id !== rowId) };
     }));
 
-    setTasks((prev) => prev.filter((task: any) => task.sourceIssueRowId !== rowId));
+    commitTasks((prev) => prev.filter((task: any) => task.sourceIssueRowId !== rowId));
     if (editingIssueRowId === rowId) {
       setEditingIssueRowId(null);
       setIssueRowDraft(null);
@@ -662,12 +705,12 @@ export default function App() {
       title: `Issue Publication Sheet ${issueSheets.length + 1}`,
       rows: []
     };
-    setIssueSheets((prev) => [...prev, nextSheet]);
+    updateIssueSheets((prev) => [...prev, nextSheet]);
     setCurrentIssueSheetId(nextId);
   };
 
   const deleteIssueSheet = (sheetId: string) => {
-    setIssueSheets((prev) => {
+    updateIssueSheets((prev) => {
       if (prev.length <= 1) return prev;
       const remaining = prev.filter((sheet) => sheet.id !== sheetId);
       if (remaining.length > 0) {
@@ -678,7 +721,7 @@ export default function App() {
   };
 
   const removeIssueRow = (id: string) => {
-    setIssueSheets((prev) => prev.map((sheet) => {
+    updateIssueSheets((prev) => prev.map((sheet) => {
       if (sheet.id !== currentIssueSheetId) return sheet;
       return { ...sheet, rows: sheet.rows.filter((row) => row.id !== id) };
     }));
@@ -769,8 +812,8 @@ export default function App() {
   const executeCreateAssignment = () => {
     if (!formTitle.trim()) return;
 
-    const finalAddedToLayout = formDocLink 
-      ? `=HYPERLINK("${formDocLink}", "${formTitle}")` 
+    const finalAddedToLayout = formDocLink
+      ? `=HYPERLINK("${formDocLink}", "${formTitle}")`
       : "";
 
     const selectedArtist = layoutArtistOptions.find((option) => option.value === formArtist);
@@ -863,9 +906,9 @@ export default function App() {
 
   if (!isAuthenticated) {
     return (
-      <LoginPage 
-        members={members} 
-        onLogin={handleLogin} 
+      <LoginPage
+        members={members}
+        onLogin={handleLogin}
         speechEnabled={speechEnabled}
         darkMode={darkMode}
         onToggleDarkMode={() => setDarkMode(!darkMode)}
@@ -876,20 +919,20 @@ export default function App() {
   const roleTabs = getTabsForRole();
 
   return (
-    <div 
+    <div
       className="min-h-screen bg-[#faf9f6] dark:bg-neutral-950 grid-lines-bg flex flex-col md:flex-row text-neutral-900 dark:text-neutral-100 transition-colors"
       style={{ fontSize: `${fontSizeMultiplier}rem` }}
     >
       {/* --- DESKTOP LEFT SIDEBAR (Premium Maroon Gradient Design) --- */}
       <aside className="w-72 shrink-0 bg-neutral-950 text-white rounded-[28px] p-6 m-4 hidden md:flex flex-col justify-between border border-neutral-900 shadow-xl h-[calc(100vh-2rem)] sticky top-4 z-30">
-        
+
         <div className="space-y-6 flex flex-col h-full overflow-hidden">
           {/* Logo Title Block */}
           <div className="flex items-center gap-3.5 pb-5 border-b border-neutral-900">
-            <img 
-              src={mkuleImg} 
-              alt="MKule Logo" 
-              className="w-14 h-14 object-contain shrink-0 rounded-2xl p-1 bg-neutral-900 border border-neutral-800 shadow-md" 
+            <img
+              src={mkuleImg}
+              alt="MKule Logo"
+              className="w-14 h-14 object-contain shrink-0 rounded-2xl p-1 bg-neutral-900 border border-neutral-800 shadow-md"
             />
             <div className="text-left min-w-0 flex flex-col justify-center">
               <h1 className="font-sans font-black text-lg tracking-tight text-white leading-tight">
@@ -918,8 +961,8 @@ export default function App() {
                     }
                   }}
                   className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide flex items-center gap-3 transition-all cursor-pointer text-left ${
-                    isActive 
-                      ? "bg-gradient-to-r from-[#bc1700] to-[#660000] text-white font-black shadow-lg shadow-red-950/40 border-l-4 border-white" 
+                    isActive
+                      ? "bg-gradient-to-r from-[#bc1700] to-[#660000] text-white font-black shadow-lg shadow-red-950/40 border-l-4 border-white"
                       : "text-neutral-400 hover:text-white hover:bg-neutral-900/80"
                   }`}
                 >
@@ -940,7 +983,7 @@ export default function App() {
             <p className="text-xs font-bold text-white truncate">{userName}</p>
             <p className="text-[10px] text-neutral-400 truncate font-sans">{userRole}</p>
           </div>
-          <button 
+          <button
             onClick={handleLogout}
             className="text-[10px] text-red-400 hover:text-red-300 font-bold font-sans uppercase bg-neutral-900 px-2.5 py-1 rounded-lg border border-neutral-800 shrink-0 cursor-pointer"
             title="Log out of session"
@@ -953,7 +996,7 @@ export default function App() {
       {/* --- MOBILE RESPONSIVE TOP HEADER --- */}
       <header className="md:hidden flex justify-between items-center px-4 py-3 bg-neutral-950 text-white sticky top-0 z-40 shadow-md">
         <div className="flex items-center gap-2">
-          <button 
+          <button
             onClick={() => setShowMobileSidebar(!showMobileSidebar)}
             className="p-1.5 hover:bg-neutral-900 rounded-lg text-white cursor-pointer"
             aria-label="Toggle mobile menu"
@@ -984,7 +1027,7 @@ export default function App() {
             {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-neutral-300" />}
           </button>
 
-          <button 
+          <button
             onClick={handleLogout}
             className="p-1.5 text-neutral-400 hover:text-red-400 rounded-lg cursor-pointer"
             title="Log out"
@@ -999,7 +1042,7 @@ export default function App() {
         {showMobileSidebar && (
           <>
             {/* Backdrop */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.5 }}
               exit={{ opacity: 0 }}
@@ -1007,7 +1050,7 @@ export default function App() {
               className="fixed inset-0 bg-black/60 backdrop-blur-xs z-40 md:hidden"
             />
             {/* Mobile Dropdown from Top Header */}
-            <motion.div 
+            <motion.div
               initial={{ y: -30, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: -20, opacity: 0 }}
@@ -1019,7 +1062,7 @@ export default function App() {
                   <img src={mkuleImg} alt="MKule Logo" className="w-7 h-7 object-contain shrink-0" />
                   <span className="font-sans font-black text-sm text-white tracking-tight">MKuLayout</span>
                 </div>
-                <button 
+                <button
                   onClick={() => setShowMobileSidebar(false)}
                   className="p-1.5 hover:bg-neutral-900 rounded-lg text-neutral-400 hover:text-white"
                   aria-label="Close menu"
@@ -1040,8 +1083,8 @@ export default function App() {
                         setShowMobileSidebar(false);
                       }}
                       className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-bold tracking-wide flex items-center gap-3 transition-all text-left cursor-pointer ${
-                        isActive 
-                          ? "bg-gradient-to-r from-[#bc1700] to-[#660000] text-white shadow-sm" 
+                        isActive
+                          ? "bg-gradient-to-r from-[#bc1700] to-[#660000] text-white shadow-sm"
                           : "text-neutral-300 hover:text-white hover:bg-neutral-900"
                       }`}
                     >
@@ -1057,7 +1100,7 @@ export default function App() {
                   <p className="text-xs font-bold text-white">{userName}</p>
                   <p className="text-[10px] text-neutral-400 font-sans">{userRole}</p>
                 </div>
-                <button 
+                <button
                   onClick={() => {
                     setShowMobileSidebar(false);
                     handleLogout();
@@ -1075,10 +1118,10 @@ export default function App() {
 
       {/* --- RIGHT COLUMN CONTAINER (Jobie mockup style main hub) --- */}
       <div className="flex-1 flex flex-col min-w-0 md:h-screen md:overflow-y-auto p-1.5 sm:p-3 md:p-5 space-y-2 sm:space-y-3 md:space-y-4">
-        
+
         {/* RIGHT TOP CONTROL BAR (Minimalist, Accessible) */}
         <div className="flex flex-col sm:flex-row items-center justify-between bg-white dark:bg-neutral-900 border border-neutral-150 dark:border-neutral-800 rounded-xl sm:rounded-2xl px-3 sm:px-5 py-2 sm:py-3 shadow-sm gap-2 sm:gap-3 shrink-0">
-          
+
           {/* Left info status indicator */}
           <div className="flex items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
             <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-red-600 animate-pulse shrink-0" />
@@ -1091,7 +1134,7 @@ export default function App() {
 
           {/* Right actions: Theme toggle, Accessibility controls & Alerts dropdown */}
           <div className="flex items-center gap-1.5 sm:gap-3 w-full sm:w-auto justify-end">
-            
+
             {/* Direct Theme Toggle Button */}
             <button
               type="button"
@@ -1128,13 +1171,13 @@ export default function App() {
               </button>
 
               {showNotificationsDropdown && (
-                <div 
+                <div
                   id="notifications-popup"
                   className="absolute right-0 mt-2 w-72 bg-white dark:bg-neutral-900 rounded-2xl shadow-xl border border-neutral-100 dark:border-neutral-800 p-4 space-y-3 z-50 text-left text-xs"
                 >
                   <div className="flex items-center justify-between border-b pb-1.5 border-neutral-100 dark:border-neutral-800">
                     <h3 className="font-bold text-neutral-900 dark:text-neutral-100 font-display">Alert Feed</h3>
-                    <button 
+                    <button
                       onClick={() => setNotifications([])}
                       className="text-[10px] text-red-700 dark:text-red-400 hover:underline font-bold cursor-pointer"
                     >
@@ -1296,7 +1339,7 @@ export default function App() {
                   <input
                     type="text"
                     value={issueSheetTitle}
-                    onChange={(e) => setIssueSheets((prev) => prev.map((sheet) => (
+                    onChange={(e) => updateIssueSheets((prev) => prev.map((sheet) => (
                       sheet.id === currentIssueSheetId ? { ...sheet, title: e.target.value } : sheet
                     )))}
                     className="w-full px-3 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl text-xs outline-none"
