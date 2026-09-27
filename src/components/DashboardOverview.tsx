@@ -222,18 +222,10 @@ export default function DashboardOverview({
     }
   };
 
-  // Find tasks assigned specifically to this layout staff member
-  const staffAssignedTasks = tasks.filter(t => 
-    !t.isPendingConfirmation && t.illusLayout && (
-      t.illusLayout.toLowerCase().includes(currentUserName.toLowerCase()) ||
-      currentUserName.toLowerCase().includes(t.illusLayout.toLowerCase()) ||
-      t.illusLayout.toLowerCase() === currentUserName.toLowerCase() ||
-      (currentUserName.toLowerCase().includes("sean") && t.illusLayout.toLowerCase().includes("alsim")) ||
-      (currentUserName.toLowerCase().includes("ryan") && t.illusLayout.toLowerCase().includes("abad")) ||
-      (currentUserName.toLowerCase().includes("ryaen") && t.illusLayout.toLowerCase().includes("abad")) ||
-      (currentUserName.toLowerCase().includes("clarisse") && t.illusLayout.toLowerCase().includes("musni")) ||
-      (currentUserName.toLowerCase().includes("carl") && t.illusLayout.toLowerCase().includes("donor"))
-    )
+  // Find tasks assigned specifically to this layout staff member using the same
+  // official email/name matching logic as the rest of the app.
+  const staffAssignedTasks = tasks.filter(t =>
+    !t.isPendingConfirmation && isUserAssignedToTask(t, currentUserName, currentUserEmail)
   );
 
   // Compute metrics
