@@ -277,6 +277,61 @@ export default function App() {
     pushStateToBackend({ comments: updated });
   };
 
+  const AUTH_SESSION_KEY = "mkule_auth_session";
+  const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
+
+  const clearStoredSession = () => {
+    try {
+      localStorage.removeItem(AUTH_SESSION_KEY);
+    } catch {
+      // ignore storage errors
+    }
+  };
+
+  const persistSessionState = (email: string, role: UserRole, name: string) => {
+    try {
+      const payload = {
+        email: normalizeEmail(email),
+        role,
+        name,
+        lastActivityAt: Date.now(),
+      };
+      localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(payload));
+    } catch {
+      // ignore storage errors
+    }
+  };
+
+  const restoreStoredSession = () => {
+    try {
+      const raw = localStorage.getItem(AUTH_SESSION_KEY);
+      if (!raw) return null;
+
+      const parsed = JSON.parse(raw) as {
+        email?: string;
+        role?: UserRole;
+        name?: string;
+        lastActivityAt?: number;
+      };
+
+      if (!parsed.email || !parsed.role || !parsed.name) {
+        clearStoredSession();
+        return null;
+      }
+
+      const elapsed = Date.now() - (parsed.lastActivityAt ?? Date.now());
+      if (elapsed > SIX_HOURS_MS) {
+        clearStoredSession();
+        return null;
+      }
+
+      return parsed;
+    } catch {
+      clearStoredSession();
+      return null;
+    }
+  };
+
   const applyAuthenticatedUser = async (email: string, fallbackRole: UserRole, fallbackName: string) => {
     const normalizedEmail = normalizeEmail(email);
     const profile = await fetchUserProfileByEmail(normalizedEmail);
@@ -289,6 +344,7 @@ export default function App() {
     setUserEmail(normalizedEmail);
     setIsAuthenticated(true);
     setActiveTab("dashboard");
+    persistSessionState(normalizedEmail, resolvedRole, resolvedName);
   };
 
   const handleLogin = async (role: UserRole, name: string, email: string) => {
@@ -299,6 +355,7 @@ export default function App() {
     if (supabase) {
       await supabase.auth.signOut();
     }
+    clearStoredSession();
     setIsAuthenticated(false);
     setUserRole("Layout Staff Member");
     setUserEmail("");
@@ -306,13 +363,85 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (!supabase) return;
+    if (!isAuthenticated) return;
+
+    const updateLastActivity = () => {
+      const currentSession = restoreStoredSession();
+      if (!currentSession) {
+        void handleLogout();
+        return;
+      }
+
+      const updated = {
+        ...currentSession,
+        lastActivityAt: Date.now(),
+      };
+      try {
+        localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(updated));
+      } catch {
+        // ignore storage errors
+      }
+    };
+
+    const checkSessionExpiry = () => {
+      const currentSession = restoreStoredSession();
+      if (!currentSession) {
+        void handleLogout();
+        return;
+      }
+
+      if (Date.now() - (currentSession.lastActivityAt ?? Date.now()) > SIX_HOURS_MS) {
+        void handleLogout();
+      }
+    };
+
+    const events: Array<keyof WindowEventMap> = ["pointerdown", "keydown", "click", "touchstart", "scroll", "mousemove"];
+    events.forEach((eventName) => {
+      window.addEventListener(eventName, updateLastActivity);
+    });
+
+    const timer = window.setInterval(checkSessionExpiry, 60000);
+    updateLastActivity();
+
+    return () => {
+      window.clearInterval(timer);
+      events.forEach((eventName) => {
+        window.removeEventListener(eventName, updateLastActivity);
+      });
+    };
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!supabase) {
+      const storedSession = restoreStoredSession();
+      if (storedSession) {
+        setUserRole(storedSession.role ?? "Layout Staff Member");
+        setUserName(storedSession.name ?? "");
+        setUserEmail(storedSession.email ?? "");
+        setIsAuthenticated(true);
+        setActiveTab("dashboard");
+      }
+      return;
+    }
 
     let active = true;
 
     const restoreSupabaseSession = async () => {
       const { data } = await supabase.auth.getSession();
-      if (!active || !data.session?.user?.email) return;
+      const storedSession = restoreStoredSession();
+
+      if (!active) return;
+
+      if (storedSession) {
+        setUserRole(storedSession.role ?? "Layout Staff Member");
+        setUserName(storedSession.name ?? "");
+        setUserEmail(storedSession.email ?? "");
+        setIsAuthenticated(true);
+        setActiveTab("dashboard");
+        return;
+      }
+
+      if (!data.session?.user?.email) return;
       await applyAuthenticatedUser(
         data.session.user.email,
         "Layout Staff Member",
@@ -323,6 +452,7 @@ export default function App() {
     const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!active || !session?.user?.email) {
         if (!active) return;
+        clearStoredSession();
         setIsAuthenticated(false);
         setUserRole("Layout Staff Member");
         setUserEmail("");
