@@ -617,6 +617,17 @@ export async function createAnnouncement(ann: { id?: string; title: string; cont
   return data;
 }
 
+export async function deleteAnnouncement(id: string): Promise<boolean> {
+  if (!supabase) return false;
+  const uuid = ensureUuid(id);
+  const { error } = await supabase.from("announcements").delete().eq("id", uuid);
+  if (error) {
+    console.error("Error deleting announcement:", error.message);
+    return false;
+  }
+  return true;
+}
+
 // ============================================================================
 // ISSUE SHEETS & SHARED APP STATE
 // ============================================================================

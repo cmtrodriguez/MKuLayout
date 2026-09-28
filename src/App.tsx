@@ -129,23 +129,37 @@ export default function App() {
   const [fontSizeMultiplier, setFontSizeMultiplier] = useState(1);
   const [speechEnabled, setSpeechEnabled] = useState(false);
 
-  // Theme & Appearance State (Persisted across sessions)
-  const [darkMode, setDarkMode] = useState<boolean>(() => {
-    return localStorage.getItem("mkule_theme") === "dark";
-  });
+  // Theme & Appearance State (persisted per-account, defaults to light)
+  const [darkMode, setDarkMode] = useState<boolean>(false);
   const [accentTheme, setAccentTheme] = useState<"maroon" | "navy" | "forest" | "grape">(() => {
     return (localStorage.getItem("mkule_accent") as any) || "maroon";
   });
 
+  // Guards the persist effect so loading a saved theme (or switching accounts)
+  // never writes the previous account's value onto the new account's key.
+  const themeSkipPersist = useRef(false);
+  const themeKeyFor = (email: string) => `mkule_theme_${email.toLowerCase()}`;
+
+  // Load the signed-in account's own theme preference; light when unset.
   useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("mkule_theme", "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("mkule_theme", "light");
+    themeSkipPersist.current = true;
+    if (!userEmail) {
+      setDarkMode(false);
+      return;
     }
-  }, [darkMode]);
+    setDarkMode(localStorage.getItem(themeKeyFor(userEmail)) === "dark");
+  }, [userEmail]);
+
+  // Apply the dark class and persist the choice against the current account.
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", darkMode);
+    if (themeSkipPersist.current) {
+      themeSkipPersist.current = false;
+      return;
+    }
+    if (!userEmail) return;
+    localStorage.setItem(themeKeyFor(userEmail), darkMode ? "dark" : "light");
+  }, [darkMode, userEmail]);
 
   const applyAccentTheme = (color: "maroon" | "navy" | "forest" | "grape") => {
     setAccentTheme(color);

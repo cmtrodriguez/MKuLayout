@@ -337,7 +337,7 @@ export default function TaskDetailsModal({
           <div className="bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl text-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
             <span className="font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wide shrink-0">Workflow Actions Desk</span>
             <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-end">
-              {currentUserRole === "Layout Editor" && task.progress !== "For Review" && task.progress !== "Completed" && task.progress !== "Approved" && (
+              {task.progress !== "For Review" && task.progress !== "Completed" && task.progress !== "Approved" && (
                 <button
                   onClick={() => {
                     const updated = { ...task, progress: "For Review" as const, lastUpdated: new Date().toISOString() };

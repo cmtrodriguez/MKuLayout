@@ -98,10 +98,10 @@ export default function CalendarView({
 
   // Task deadlines rendered as calendar entries alongside standalone events
   const taskEntries = tasks
-    .map(t => ({ id: `task-${t.id}`, title: t.title, start: toTaskISO(t.releaseDate || "") || "", type: "deadline" as const, isTask: true, description: "" }))
+    .map(t => ({ id: `task-${t.id}`, title: t.title, start: toTaskISO(t.releaseDate || "") || "", type: "deadline" as const, isTask: true, description: "", category: t.typeOfContent || "" }))
     .filter(e => e.start);
 
-  const eventEntries = events.map(e => ({ id: e.id, title: e.title, start: e.start, type: e.type, isTask: false, description: e.description }));
+  const eventEntries = events.map(e => ({ id: e.id, title: e.title, start: e.start, type: e.type, isTask: false, description: e.description, category: "" }));
 
   const agendaItems = [...eventEntries, ...taskEntries].sort((a, b) => a.start.localeCompare(b.start));
 
@@ -289,6 +289,11 @@ export default function CalendarView({
                     )}
                   </div>
                 </div>
+                {e.category && (
+                  <span className="inline-block px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-brand-cream text-brand-maroon border border-brand-maroon/20">
+                    {e.category}
+                  </span>
+                )}
                 {e.description && <p className="text-[11px] text-gray-500 leading-relaxed">{e.description}</p>}
                 
                 <span className="text-[10px] text-brand-maroon font-mono font-bold block pt-1">

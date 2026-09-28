@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { Task, TeamMember, CalendarEvent, Poll, PersonalCalendarEvent } from "../types";
 import { getPreferredFirstName, isUserAssignedToTask } from "../lib/memberUtils";
-import { fetchPersonalEvents, upsertPersonalEvent, deletePersonalEvent, createPoll, updatePollOptionVotes, deletePoll, createAnnouncement } from "../lib/supabase";
+import { fetchPersonalEvents, upsertPersonalEvent, deletePersonalEvent, createPoll, updatePollOptionVotes, deletePoll, createAnnouncement, deleteAnnouncement } from "../lib/supabase";
 import CalendarView from "./CalendarView";
 import MeetingPolls from "./MeetingPolls";
 
@@ -174,21 +174,19 @@ export default function DashboardOverview({
     window.speechSynthesis.speak(utterance);
   };
 
-  const handleAddAnnouncement = (e: React.FormEvent) => {
+  const handleAddAnnouncement = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newAnnTitle.trim() || !newAnnContent.trim()) return;
 
-    const newAnn = {
-      id: `ann-${Date.now()}`,
+    const created = await createAnnouncement({
       title: newAnnTitle.trim(),
       content: newAnnContent.trim(),
       date: new Date().toISOString().split("T")[0],
       author: `${currentUserName} (${currentUserRole})`
-    };
+    });
 
-    const updated = [newAnn, ...announcements];
-    if (onUpdateAnnouncements) {
-      onUpdateAnnouncements(updated);
+    if (created && onUpdateAnnouncements) {
+      onUpdateAnnouncements([created, ...announcements]);
     }
     setNewAnnTitle("");
     setNewAnnContent("");
@@ -196,11 +194,11 @@ export default function DashboardOverview({
     speakText("Announcement posted across all members.");
   };
 
-  const handleDeleteAnnouncement = (id: string) => {
+  const handleDeleteAnnouncement = async (id: string) => {
     if (window.confirm("Remove this announcement for all members?")) {
-      const updated = announcements.filter(a => a.id !== id);
+      await deleteAnnouncement(id);
       if (onUpdateAnnouncements) {
-        onUpdateAnnouncements(updated);
+        onUpdateAnnouncements(announcements.filter(a => a.id !== id));
       }
       speakText("Announcement removed.");
     }
