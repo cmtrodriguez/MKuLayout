@@ -426,6 +426,20 @@ export default function App() {
     }
   };
 
+  // Authoritative role resolution. The official section registry is the source of truth
+  // for the fixed Layout roles, so a refresh / token-refresh can never downgrade an
+  // Editor or Deputy to "Layout Staff Member" just because the DB profile role is empty.
+  const resolveRoleForEmail = (
+    email: string,
+    profileRole?: string | null,
+    storedRole?: UserRole,
+    fallbackRole: UserRole = "Layout Staff Member"
+  ): UserRole => {
+    const normalized = normalizeEmail(email || "").toLowerCase();
+    const registryRole = OFFICIAL_MEMBERS_MAP[normalized]?.role;
+    return (registryRole ?? (profileRole as UserRole | undefined) ?? storedRole ?? fallbackRole) as UserRole;
+  };
+
   const applyAuthenticatedUser = async (email: string, fallbackRole: UserRole, fallbackName: string) => {
     const normalizedEmail = normalizeEmail(email);
     const profile = await fetchUserProfileByEmail(normalizedEmail);
@@ -439,7 +453,7 @@ export default function App() {
         ? (stored.role as UserRole | undefined)
         : undefined;
 
-    const resolvedRole = (profile?.role as UserRole | undefined) ?? storedRole ?? fallbackRole;
+    const resolvedRole = resolveRoleForEmail(normalizedEmail, profile?.role, storedRole, fallbackRole);
     const resolvedName = profile?.full_name || fallbackName || normalizedEmail;
 
     setUserRole(resolvedRole);
@@ -518,7 +532,7 @@ export default function App() {
     if (!supabase) {
       const storedSession = restoreStoredSession();
       if (storedSession) {
-        setUserRole(storedSession.role ?? "Layout Staff Member");
+        setUserRole(resolveRoleForEmail(storedSession.email ?? "", null, storedSession.role as UserRole));
         setUserName(storedSession.name ?? "");
         setUserEmail(storedSession.email ?? "");
         setIsAuthenticated(true);
@@ -536,7 +550,7 @@ export default function App() {
       if (!active) return;
 
       if (storedSession) {
-        setUserRole(storedSession.role ?? "Layout Staff Member");
+        setUserRole(resolveRoleForEmail(storedSession.email ?? "", null, storedSession.role as UserRole));
         setUserName(storedSession.name ?? "");
         setUserEmail(storedSession.email ?? "");
         setIsAuthenticated(true);
@@ -552,22 +566,28 @@ export default function App() {
       );
     };
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (!active || !session?.user?.email) {
-        if (!active) return;
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!active) return;
+
+      if (session?.user?.email) {
+        await applyAuthenticatedUser(
+          session.user.email,
+          "Layout Staff Member",
+          session.user.user_metadata?.full_name || session.user.email,
+        );
+        return;
+      }
+
+      // Only an explicit sign-out should clear the local session. Transient events with a
+      // null session (e.g. a TOKEN_REFRESHED race on tab focus) must not log the user out
+      // or downgrade their role — the restored localStorage session stays authoritative.
+      if (event === "SIGNED_OUT") {
         clearStoredSession();
         setIsAuthenticated(false);
         setUserRole("Layout Staff Member");
         setUserEmail("");
         setUserName("");
-        return;
       }
-
-      await applyAuthenticatedUser(
-        session.user.email,
-        "Layout Staff Member",
-        session.user.user_metadata?.full_name || session.user.email,
-      );
     });
 
     void restoreSupabaseSession();
