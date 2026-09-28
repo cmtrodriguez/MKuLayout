@@ -136,9 +136,42 @@ export default function AssignmentsList({
     
     let updated = tasks.map(t => t.id === task.id ? finalData : t);
 
-    // Whenever assigning/confirming an Issue Layout task,
-    // automatically generate/update the companion Online Pubmat assignment for the same ArtX
-    if (finalData.typeOfRelease === "Issue Article" || task.typeOfRelease === "Issue Article") {
+    const sourceRowId = (activeForm as any).sourceIssueRowId || (task as any).sourceIssueRowId;
+    const dispatchProgress = (finalData.illusLayout && finalData.illusLayout !== "Unassigned") ? "Assigned" : "Not Started";
+
+    if (sourceRowId) {
+      // Confirming a task that originated from an Issue Publication sheet row must produce BOTH
+      // an Issue Publication task (shown under the sheet container) and an Online Pubmat task,
+      // so the assigned account receives the two companion assignments.
+      const baseTitle = finalData.title.replace(/\s*\(Online Pubmat\)$/i, "").trim();
+      const issueTaskId = `issue-task-${sourceRowId}`;
+
+      const onlineTask = {
+        ...finalData,
+        id: task.id,
+        title: baseTitle,
+        typeOfRelease: "Online Article",
+        isPendingConfirmation: false,
+        progress: dispatchProgress,
+        lastUpdated: new Date().toISOString()
+      } as Task;
+
+      const issueTask = {
+        ...finalData,
+        id: issueTaskId,
+        title: baseTitle,
+        typeOfRelease: "Issue Article",
+        isPendingConfirmation: false,
+        progress: dispatchProgress,
+        lastUpdated: new Date().toISOString(),
+        sourceIssueRowId: sourceRowId
+      } as Task & { sourceIssueRowId?: string };
+
+      updated = updated.filter(t => t.id !== issueTaskId).map(t => t.id === task.id ? onlineTask : t);
+      updated = [issueTask, ...updated];
+    } else if (finalData.typeOfRelease === "Issue Article" || task.typeOfRelease === "Issue Article") {
+      // Whenever assigning/confirming an Issue Layout task,
+      // automatically generate/update the companion Online Pubmat assignment for the same ArtX
       const baseTitle = finalData.title.replace(/\s*\(Online Pubmat\)$/i, "").trim();
 
       const existingOnlineIdx = updated.findIndex(
