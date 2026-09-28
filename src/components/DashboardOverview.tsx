@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { Task, TeamMember, CalendarEvent, Poll, PersonalCalendarEvent } from "../types";
 import { getPreferredFirstName, isUserAssignedToTask } from "../lib/memberUtils";
+import { fetchPersonalEvents, upsertPersonalEvent, deletePersonalEvent, createPoll, updatePollOptionVotes, deletePoll, createAnnouncement } from "../lib/supabase";
 import CalendarView from "./CalendarView";
 import MeetingPolls from "./MeetingPolls";
 
@@ -77,24 +78,17 @@ export default function DashboardOverview({
   const [newEventTime, setNewEventTime] = useState("");
   const [newEventNotes, setNewEventNotes] = useState("");
 
-  // Sync personal events from backend
+  // Sync personal events from Supabase
   useEffect(() => {
     if (!currentUserEmail) return;
-    const fetchPersonalEvents = async () => {
-      try {
-        const res = await fetch(`/api/personal-events?email=${encodeURIComponent(currentUserEmail)}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data)) {
-            setPersonalEvents(data);
-            localStorage.setItem(`mkule_personal_events_${currentUserEmail}`, JSON.stringify(data));
-          }
-        }
-      } catch (err) {
-        console.warn("Could not fetch personal events:", err);
+    fetchPersonalEvents(currentUserEmail).then(evs => {
+      if (evs.length > 0) {
+        setPersonalEvents(evs);
+        localStorage.setItem(`mkule_personal_events_${currentUserEmail}`, JSON.stringify(evs));
       }
-    };
-    fetchPersonalEvents();
+    }).catch(() => {
+      // If Supabase unavailable, fall back to cached localStorage data
+    });
   }, [currentUserEmail]);
 
   const handleAddPersonalEvent = async (e: React.FormEvent) => {
@@ -102,7 +96,7 @@ export default function DashboardOverview({
     if (!newEventTitle.trim()) return;
 
     const newEv: PersonalCalendarEvent = {
-      id: `pe-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      id: crypto.randomUUID(),
       userEmail: currentUserEmail,
       title: newEventTitle.trim(),
       date: selectedCalendarDate,
@@ -118,11 +112,7 @@ export default function DashboardOverview({
     localStorage.setItem(`mkule_personal_events_${currentUserEmail}`, JSON.stringify(nextEvents));
 
     try {
-      await fetch("/api/personal-events", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newEv)
-      });
+      await upsertPersonalEvent(newEv);
     } catch (err) {
       console.error("Failed to save personal event:", err);
     }
@@ -140,11 +130,7 @@ export default function DashboardOverview({
     const target = updated.find(ev => ev.id === id);
     if (target) {
       try {
-        await fetch("/api/personal-events", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(target)
-        });
+        await upsertPersonalEvent(target);
       } catch (err) {
         console.error("Failed to update personal event:", err);
       }
@@ -156,9 +142,7 @@ export default function DashboardOverview({
     setPersonalEvents(nextEvents);
     localStorage.setItem(`mkule_personal_events_${currentUserEmail}`, JSON.stringify(nextEvents));
     try {
-      await fetch(`/api/personal-events/${id}?email=${encodeURIComponent(currentUserEmail)}`, {
-        method: "DELETE"
-      });
+      await deletePersonalEvent(id, currentUserEmail);
     } catch (err) {
       console.error("Failed to delete personal event:", err);
     }

@@ -20,7 +20,7 @@ import ProfileSettings from "./components/ProfileSettings";
 import { LayoutStaffDashboard, EicDashboard } from "./components/RoleDashboards";
 import { CanvaDirectory } from "./components/CanvaDirectory";
 import { OFFICIAL_MEMBERS_MAP, getPreferredFirstName } from "./lib/memberUtils";
-import { supabase, fetchUserProfileByEmail } from "./lib/supabase";
+import { supabase, fetchUserProfileByEmail, fetchTasks, fetchMembers, fetchComments, fetchCalendarEvents, fetchPolls, fetchAnnouncements, fetchNotifications, fetchIssueSheets, upsertTask, deleteTask, upsertMember, createComment, upsertCalendarEvent, deleteCalendarEvent, createPoll, updatePollOptionVotes, deletePoll, createNotification, markNotificationRead, createAnnouncement, saveIssueSheets, subscribeToLayoutRealtime } from "./lib/supabase";
 import mkuleImg from "./mkule.png";
 
 // Domain Models
@@ -83,7 +83,10 @@ export default function App() {
     setIssueSheets(sheets);
     issueSheetsRef.current = sheets;
     localStorage.setItem("mkule_issue_publication_sheets", JSON.stringify(sheets));
-    pushStateToBackend({ issueSheets: sheets });
+    saveIssueSheets(sheets).catch(() => {
+      // Fallback: also try the legacy /api/state endpoint
+      pushStateToBackend({ issueSheets: sheets });
+    });
   };
 
   // Functional-updater form that always computes from the freshest ref and persists.
@@ -214,48 +217,84 @@ export default function App() {
     ? formArtist
     : "Unassigned";
 
-  // Fetch backend state on load and keep it synced across devices while the app stays open
-  useEffect(() => {
-    const fetchState = async () => {
+  // Fetch all app data from Supabase and initialise local state
+  const fetchAllState = async () => {
+    try {
+      const [sbTasks, sbMembers, sbComments, sbEvents, sbPolls, sbAnnouncements, sbNotifications, sbIssueSheets] = await Promise.all([
+        fetchTasks(),
+        fetchMembers(),
+        fetchComments(),
+        fetchCalendarEvents(),
+        fetchPolls(),
+        fetchAnnouncements(),
+        fetchNotifications(),
+        fetchIssueSheets()
+      ]);
+
+      setTasks(sbTasks);
+      setMembers(sbMembers);
+      setComments(sbComments);
+      setEvents(sbEvents);
+      setPolls(sbPolls);
+      setAnnouncements(sbAnnouncements);
+      setNotifications(sbNotifications);
+
+      if (sbIssueSheets && sbIssueSheets.length > 0) {
+        setIssueSheets(sbIssueSheets);
+        issueSheetsRef.current = sbIssueSheets;
+        localStorage.setItem("mkule_issue_publication_sheets", JSON.stringify(sbIssueSheets));
+      }
+    } catch (err) {
+      // Fall back to legacy /api/state if Supabase not available
       try {
         const response = await fetch("/api/state");
-        if (!response.ok) {
-          throw new Error(`State fetch failed with ${response.status}`);
+        if (response.ok) {
+          const data = await response.json();
+          setTasks(data.tasks || []);
+          setMembers(data.members || []);
+          setEvents(data.events || []);
+          setPolls(data.polls || []);
+          setComments(data.comments || []);
+          setAnnouncements(data.announcements || []);
+          setNotifications(data.notifications || []);
+          if (Array.isArray(data.issueSheets) && data.issueSheets.length > 0) {
+            setIssueSheets(data.issueSheets);
+            localStorage.setItem("mkule_issue_publication_sheets", JSON.stringify(data.issueSheets));
+          }
         }
-
-        const data = await response.json();
-        setTasks(data.tasks || []);
-        setMembers(data.members || []);
-        setEvents(data.events || []);
-        setPolls(data.polls || []);
-        setComments(data.comments || []);
-        setAnnouncements(data.announcements || []);
-        setNotifications(data.notifications || []);
-        // Adopt the shared issue-publication sheets from the backend so all
-        // accounts render the same rows, and keep the local cache in step.
-        if (Array.isArray(data.issueSheets) && data.issueSheets.length > 0) {
-          setIssueSheets(data.issueSheets);
-          localStorage.setItem("mkule_issue_publication_sheets", JSON.stringify(data.issueSheets));
-        }
-      } catch (err) {
-        console.error("Failed to load initial layout state", err);
-      } finally {
-        setLoading(false);
+      } catch (fallbackErr) {
+        console.error("Failed to load initial layout state", fallbackErr);
       }
-    };
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchState();
+  useEffect(() => {
+    fetchAllState();
 
-    const syncInterval = window.setInterval(() => {
-      fetchState();
-    }, 5000);
+    // Subscribe to realtime updates — no polling needed
+    const unsubscribe = subscribeToLayoutRealtime({
+      onTasksChange: async () => { setTasks(await fetchTasks()); },
+      onCommentsChange: async () => { setComments(await fetchComments()); },
+      onCalendarChange: async () => { setEvents(await fetchCalendarEvents()); },
+      onPollsChange: async () => { setPolls(await fetchPolls()); },
+      onNotificationsChange: async () => { setNotifications(await fetchNotifications()); },
+      onAnnouncementsChange: async () => { setAnnouncements(await fetchAnnouncements()); },
+      onMembersChange: async () => { setMembers(await fetchMembers()); },
+      onIssueSheetsChange: (data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setIssueSheets(data);
+          issueSheetsRef.current = data;
+          localStorage.setItem("mkule_issue_publication_sheets", JSON.stringify(data));
+        }
+      }
+    });
 
-    return () => {
-      window.clearInterval(syncInterval);
-    };
+    return () => { unsubscribe(); };
   }, []);
 
-  // Save changes to backend
+  // Legacy helper — still used by issueSheets, but Supabase-first
   const pushStateToBackend = async (updates: {
     tasks?: Task[];
     members?: TeamMember[];
@@ -266,41 +305,16 @@ export default function App() {
     announcements?: any[];
     issueSheets?: typeof issueSheets;
   }) => {
-    try {
-      const latestResponse = await fetch("/api/state");
-      const latestState = latestResponse.ok ? await latestResponse.json() : null;
-
-      const nextTasks = updates.tasks !== undefined ? updates.tasks : latestState?.tasks ?? tasks;
-      const nextMembers = updates.members !== undefined ? updates.members : latestState?.members ?? members;
-      const nextEvents = updates.events !== undefined ? updates.events : latestState?.events ?? events;
-      const nextPolls = updates.polls !== undefined ? updates.polls : latestState?.polls ?? polls;
-      const nextComments = updates.comments !== undefined ? updates.comments : latestState?.comments ?? comments;
-      const nextNotifications = updates.notifications !== undefined ? updates.notifications : latestState?.notifications ?? notifications;
-      const nextAnnouncements = updates.announcements !== undefined ? updates.announcements : latestState?.announcements ?? announcements;
-      const nextIssueSheets = updates.issueSheets !== undefined ? updates.issueSheets : latestState?.issueSheets ?? issueSheetsRef.current;
-
-      await fetch("/api/state", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          members: nextMembers,
-          tasks: nextTasks,
-          events: nextEvents,
-          polls: nextPolls,
-          comments: nextComments,
-          notifications: nextNotifications,
-          announcements: nextAnnouncements,
-          issueSheets: nextIssueSheets
-        })
-      });
-    } catch (err) {
-      console.error("Error writing backend state changes", err);
+    // Issue sheets are stored in app_state via Supabase
+    if (updates.issueSheets) {
+      saveIssueSheets(updates.issueSheets).catch(() => {});
     }
+    // Other mutations are handled via direct Supabase calls in each handler
   };
 
   const handleUpdateTasks = (newTasks: Task[]) => {
     setTasks(newTasks);
-    pushStateToBackend({ tasks: newTasks });
+    // Individual task mutations are done via upsertTask/deleteTask in place
   };
 
   // Compute the next task list from current state and persist it to the backend.
@@ -311,28 +325,28 @@ export default function App() {
       : updater;
     tasksRef.current = nextTasks;
     setTasks(nextTasks);
-    pushStateToBackend({ tasks: nextTasks });
+    // Realtime will reflect the change across all sessions
   };
 
   const handleUpdateMembers = (newMembers: TeamMember[]) => {
     setMembers(newMembers);
-    pushStateToBackend({ members: newMembers });
+    newMembers.forEach(m => upsertMember(m).catch(() => {}));
   };
 
   const handleUpdateEvents = (newEvents: CalendarEvent[]) => {
     setEvents(newEvents);
-    pushStateToBackend({ events: newEvents });
+    // Individual event mutations handled via upsertCalendarEvent/deleteCalendarEvent
   };
 
   const handleUpdatePolls = (newPolls: Poll[]) => {
     setPolls(newPolls);
-    pushStateToBackend({ polls: newPolls });
+    // Poll voting is handled via updatePollOptionVotes per option
   };
 
   const handleAddComment = (newComment: TaskComment) => {
     const updated = [...comments, newComment];
     setComments(updated);
-    pushStateToBackend({ comments: updated });
+    createComment(newComment).catch(() => {});
   };
 
   const AUTH_SESSION_KEY = "mkule_auth_session";
@@ -544,7 +558,7 @@ export default function App() {
     };
     const updated = [...comments, newComment];
     setComments(updated);
-    pushStateToBackend({ comments: updated });
+    createComment(newComment).catch(() => {});
   };
 
   const handleAddNotification = (title: string, message: string, type: 'info' | 'assignment' | 'deadline' | 'revision' | 'poll' | 'birthday') => {
@@ -558,7 +572,7 @@ export default function App() {
     };
     const nextNotifs = [notif, ...notifications];
     setNotifications(nextNotifs);
-    pushStateToBackend({ notifications: nextNotifs });
+    createNotification(notif).catch(() => {});
   };
 
   const updateIssueRow = (id: string, field: "page" | "section" | "title" | "writer" | "graphics" | "layout" | "online" | "progress", value: string) => {
@@ -857,6 +871,9 @@ export default function App() {
 
     setTasks(nextTasks);
 
+    // Persist tasks to Supabase
+    nextTasks.forEach(t => upsertTask(t).catch(() => {}));
+
     // Push Notification
     if (formArtist !== "Unassigned") {
       const notif: Notification = {
@@ -869,9 +886,7 @@ export default function App() {
       };
       const nextNotifs = [notif, ...notifications];
       setNotifications(nextNotifs);
-      pushStateToBackend({ tasks: nextTasks, notifications: nextNotifs });
-    } else {
-      pushStateToBackend({ tasks: nextTasks });
+      createNotification(notif).catch(() => {});
     }
 
     // Reset Form

@@ -21,14 +21,14 @@ const supabase = supabaseUrl && supabaseServiceKey
     })
   : null;
 
-async function syncSupabaseState(data: any) {
+async function syncSupabaseState(stateData: any) {
   if (!supabase) return;
 
   try {
     const { error } = await supabase.from("app_state").upsert(
       {
         id: "app-state",
-        content: data,
+        data: stateData,
         updated_at: new Date().toISOString()
       },
       { onConflict: "id" }
@@ -46,9 +46,9 @@ async function readSupabaseState() {
   if (!supabase) return null;
 
   try {
-    const { data, error } = await supabase
+    const { data: row, error } = await supabase
       .from("app_state")
-      .select("content")
+      .select("data")
       .eq("id", "app-state")
       .maybeSingle();
 
@@ -57,11 +57,11 @@ async function readSupabaseState() {
       return null;
     }
 
-    if (!data?.content) {
+    if (!row?.data) {
       return null;
     }
 
-    return typeof data.content === "string" ? JSON.parse(data.content) : data.content;
+    return typeof row.data === "string" ? JSON.parse(row.data) : row.data;
   } catch (err) {
     console.warn("Supabase read failed:", err);
     return null;
