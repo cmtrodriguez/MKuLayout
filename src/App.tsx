@@ -26,6 +26,17 @@ import mkuleImg from "./mkule.png";
 // Domain Models
 import { Task, TeamMember, CalendarEvent, Poll, Notification, TaskComment, UserRole, normalizeEmail } from "./types";
 
+// Canonical Canva workspace per content category. Assigned automatically on creation so
+// staff never have to paste a design link by hand.
+const CANVA_LINK_BY_CATEGORY: Record<string, string> = {
+  News: "https://canva.link/wivqojjmn675ek9",
+  Features: "https://canva.link/njge9atp9633hpf",
+  Opinion: "https://canva.link/m4fmpvw4jhqu63s",
+  Cult: "https://canva.link/s0vxxbc10zgoajg",
+  Editorial: "https://canva.link/k6wnamj4r2p7n04",
+  Graphics: "https://canva.link/exxhxuypbjzbj7k",
+};
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>("dashboard");
   
@@ -164,13 +175,12 @@ export default function App() {
   const [formDocLink, setFormDocLink] = useState("");
   const [taskFormOrigin, setTaskFormOrigin] = useState<string>("general");
   const [formReleaseType, setFormReleaseType] = useState("Online Article");
-  const [formContentType, setFormContentType] = useState("feats artx");
+  const [formContentType, setFormContentType] = useState("News");
   const [formWriter, setFormWriter] = useState("");
   const [formArtist, setFormArtist] = useState("Unassigned");
   const [formPriority, setFormPriority] = useState<"Low" | "Medium" | "High" | "Urgent">("Medium");
   const [formReleaseDate, setFormReleaseDate] = useState("");
   const [formWriteup, setFormWriteup] = useState("");
-  const [formCanvaLink, setFormCanvaLink] = useState("");
   const [formPubmatLink, setFormPubmatLink] = useState("");
 
   const layoutArtistOptions = Array.from(
@@ -809,7 +819,7 @@ export default function App() {
       case "Layout Editor":
         return [
           { id: "dashboard", label: "Home", icon: LayoutGrid },
-          { id: "issue-publication", label: "Publication Issue", icon: BookOpen },
+          { id: "issue-publication", label: "Issue Publication", icon: BookOpen },
           { id: "online-pubmat", label: "Online Pubmat", icon: Kanban },
           { id: "review-submissions", label: "Review Submissions", icon: ShieldCheck },
           { id: "canva-directory", label: "Canva Template Directory", icon: Link2 },
@@ -882,6 +892,7 @@ export default function App() {
       : "";
 
     const selectedArtist = layoutArtistOptions.find((option) => option.value === formArtist);
+    const autoCanvaLink = CANVA_LINK_BY_CATEGORY[formContentType] || "";
     const created: Task = {
       id: `task-${Date.now()}`,
       title: formTitle,
@@ -899,7 +910,7 @@ export default function App() {
       commentsCount: 0,
       revisionCount: 0,
       lastUpdated: new Date().toISOString(),
-      canvaLink: formCanvaLink || "",
+      canvaLink: autoCanvaLink,
       pubmatLink: formPubmatLink || "",
       draftLink: formDocLink || "",
       addedToLayout: finalAddedToLayout,
@@ -930,7 +941,7 @@ export default function App() {
       const notif: Notification = {
         id: `notif-${Date.now()}`,
         title: "New Layout Assignment",
-        message: `You have been assigned to layout '${formTitle}' targeting ${formReleaseDate}.` + (formCanvaLink ? ` Canva link: ${formCanvaLink}` : ''),
+        message: `You have been assigned to layout '${formTitle}' targeting ${formReleaseDate}.` + (autoCanvaLink ? ` Canva link: ${autoCanvaLink}` : ''),
         type: "assignment",
         timestamp: new Date().toISOString(),
         readBy: []
@@ -945,7 +956,6 @@ export default function App() {
     setFormDocLink("");
     setFormWriter("");
     setFormWriteup("");
-    setFormCanvaLink("");
     setFormPubmatLink("");
     setShowTaskForm(false);
   };
@@ -1346,7 +1356,7 @@ export default function App() {
                   <div>
                     <h3 className="font-sans font-black text-neutral-900 dark:text-neutral-100 text-base sm:text-lg flex items-center gap-2">
                       <BookOpen className="w-4 h-4 text-[#bc1700]" />
-                      Publication Issue
+                      Issue Publication
                     </h3>
                     <p className="text-[10px] sm:text-xs text-neutral-500 dark:text-neutral-400">
                       Manual publication planning sheet for issue assignment and tracking.
@@ -1680,7 +1690,7 @@ export default function App() {
                 <option value="Cult">Cult</option>
                 <option value="Opinion">Opinion</option>
                 <option value="Editorial">Editorial</option>
-                <option value="Signos">Signos</option>
+                <option value="MM">MM</option>
                 <option value="Graphics">Graphics</option>
               </select>
             </div>
@@ -1806,7 +1816,7 @@ export default function App() {
                   <option value="Cult">Cult / Culture (cult artx)</option>
                   <option value="Editorial">Editorial</option>
                   <option value="Front">Front</option>
-                  <option value="Signos">Signos</option>
+                  <option value="MM">MM</option>
                   <option value="Graphics">Graphics / Illustration</option>
                   <option value="News Feats">News Feats</option>
                   <option value="OP Persona">OP Persona</option>
@@ -1911,18 +1921,7 @@ export default function App() {
             </div>
 
             <div>
-              <label className="text-neutral-600 font-semibold block mb-1">Canva Workspace Design Link (Optional)</label>
-              <input
-                type="text"
-                placeholder="e.g. https://www.canva.com/design/DAF..."
-                value={formCanvaLink}
-                onChange={(e) => setFormCanvaLink(e.target.value)}
-                className="w-full px-3 py-2 border border-neutral-200 rounded-xl focus:ring-1 focus:ring-red-600 outline-none font-mono"
-              />
-            </div>
-
-            <div>
-              <label className="text-neutral-600 font-semibold block mb-1">Pubmat / Reference Link (Optional)</label>
+              <label className="text-neutral-600 font-semibold block mb-1">Graphics/Illustration Link (Optional)</label>
               <input
                 type="text"
                 placeholder="e.g. shared folder or reference link"

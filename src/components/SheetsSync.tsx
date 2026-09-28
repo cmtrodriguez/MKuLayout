@@ -2755,7 +2755,7 @@ export default function SheetsSync({
                     "Opinion",
                     "Editorial",
                     "Front",
-                    "Signos",
+                    "MM",
                     "Opinion w/ Lola P",
                     "Graphics",
                     "News Feats",

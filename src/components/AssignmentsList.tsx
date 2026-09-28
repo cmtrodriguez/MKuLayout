@@ -797,12 +797,14 @@ export default function AssignmentsList({
                         >
                           <Edit2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Edit
                         </button>
-                        <button
-                          onClick={() => handleRejectTask(task.id)}
-                          className="flex-1 md:flex-initial px-2 sm:px-3 py-1.5 sm:py-2 border border-red-200 dark:border-red-800/80 hover:bg-red-50 dark:hover:bg-red-950/40 text-red-600 dark:text-red-400 font-bold rounded-lg sm:rounded-xl flex items-center justify-center gap-1 cursor-pointer transition-all text-[11px] sm:text-xs"
-                        >
-                          <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Reject
-                        </button>
+                        {isAdmin && (
+                          <button
+                            onClick={() => handleRejectTask(task.id)}
+                            className="flex-1 md:flex-initial px-2 sm:px-3 py-1.5 sm:py-2 border border-red-200 dark:border-red-800/80 hover:bg-red-50 dark:hover:bg-red-950/40 text-red-600 dark:text-red-400 font-bold rounded-lg sm:rounded-xl flex items-center justify-center gap-1 cursor-pointer transition-all text-[11px] sm:text-xs"
+                          >
+                            <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Reject
+                          </button>
+                        )}
                         <button
                           onClick={() => handleConfirmAndDispatch(task)}
                           className="flex-1 md:flex-initial px-2.5 sm:px-4 py-1.5 sm:py-2.5 bg-brand-maroon hover:bg-brand-maroon-dark text-white font-bold rounded-lg sm:rounded-xl flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer transition-all shadow-md text-[11px] sm:text-xs"

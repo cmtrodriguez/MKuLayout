@@ -331,7 +331,7 @@ export default function DashboardOverview({
   const effectiveCompletedTasks = staffStatsPeriod === "semester" ? myCompletedTasks : myMonthCompletedTasks;
 
   const CATEGORIES = [
-    "News", "Features", "Opinion", "Cult", "Editorial", "Front", "Signos", "Graphics"
+    "News", "Features", "Opinion", "Cult", "Editorial", "Front", "MM", "Graphics"
   ];
 
   const categoryCounts: Record<string, number> = {};
@@ -668,7 +668,7 @@ export default function DashboardOverview({
                   )}
                 </div>
 
-                {!isStaffOrProbi && (
+                {isEditorOrDeputy && (
                   <button
                     onClick={onAddTask}
                     className="w-full py-2 sm:py-2.5 bg-gradient-to-r from-[#bc1700] to-[#660000] hover:shadow-md text-white font-bold rounded-lg sm:rounded-xl text-[11px] sm:text-xs flex items-center justify-center gap-1.5 transition-all shadow-[0_8px_20px_rgba(188,23,0,0.15)] cursor-pointer"
