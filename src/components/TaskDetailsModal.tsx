@@ -7,6 +7,7 @@ import { Task, TeamMember, TaskComment, TaskStatus, TaskPriority } from "../type
 import { extractHyperlinkDetails } from "../lib/canvaTemplates";
 import { formatCommentDetails, handleBulletKeyDown, RenderFormattedComment } from "../lib/commentUtils";
 import { getPreferredFirstName } from "../lib/memberUtils";
+import { toISOFormatDate, formatISOToDisplayDate } from "./AssignmentsList";
 import GoogleDocShareWidget from "./GoogleDocShareWidget";
 import { shareGoogleDocWithMember } from "../lib/googleDriveShare";
 
@@ -144,14 +145,14 @@ export default function TaskDetailsModal({
                 {isEditorOrDeputy ? (
                   <input
                     type="date"
-                    value={/^\d{4}-\d{2}-\d{2}$/.test(task.releaseDate || "") ? task.releaseDate : ""}
-                    onChange={(e) => onUpdateTask({ ...task, releaseDate: e.target.value, lastUpdated: new Date().toISOString() })}
+                    value={toISOFormatDate(task.releaseDate || "")}
+                    onChange={(e) => onUpdateTask({ ...task, releaseDate: formatISOToDisplayDate(e.target.value), lastUpdated: new Date().toISOString() })}
                     className="px-2 py-1 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg text-[11px] font-semibold text-gray-700 dark:text-neutral-200 outline-none focus:ring-2 focus:ring-brand-maroon cursor-pointer"
                     aria-label="Change task deadline"
                   />
                 ) : (
                   <span className="px-2 py-1 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg text-[11px] font-semibold text-gray-700 dark:text-neutral-200">
-                    {task.releaseDate || "No deadline"}
+                    {task.releaseDate ? formatISOToDisplayDate(task.releaseDate) : "No deadline"}
                   </span>
                 )}
               </div>

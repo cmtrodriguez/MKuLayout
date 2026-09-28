@@ -24,7 +24,7 @@ interface AssignmentsListProps {
   onOpenTaskDetails: (task: Task) => void;
 }
 
-function toISOFormatDate(dateStr: string): string {
+export function toISOFormatDate(dateStr: string): string {
   if (!dateStr) return "";
   const trimmed = dateStr.trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
@@ -41,7 +41,7 @@ function toISOFormatDate(dateStr: string): string {
   return "";
 }
 
-function formatISOToDisplayDate(isoStr: string): string {
+export function formatISOToDisplayDate(isoStr: string): string {
   if (!isoStr) return "";
   const parts = isoStr.split("-");
   if (parts.length !== 3) return isoStr;
