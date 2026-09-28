@@ -313,8 +313,30 @@ export default function App() {
   };
 
   const handleUpdateTasks = (newTasks: Task[]) => {
+    const prevTasks = tasksRef.current;
+    tasksRef.current = newTasks;
     setTasks(newTasks);
-    // Individual task mutations are done via upsertTask/deleteTask in place
+
+    // Persist edits and deletions to Supabase so tasks survive a refresh and stay in
+    // sync across devices. Only rows with a real DB (UUID) id are written: locally
+    // derived ids (e.g. issue-sheet rows) are regenerated from their own source and
+    // would otherwise be duplicated by the id-normalising upsert.
+    const isDbId = (id?: string) =>
+      typeof id === "string" &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+    const prevById = new Map(prevTasks.filter((t) => isDbId(t.id)).map((t) => [t.id, t]));
+    const newById = new Map(newTasks.filter((t) => isDbId(t.id)).map((t) => [t.id, t]));
+
+    prevById.forEach((_, id) => {
+      if (!newById.has(id)) void deleteTask(id);
+    });
+    newById.forEach((task, id) => {
+      const prev = prevById.get(id);
+      if (!prev || JSON.stringify(prev) !== JSON.stringify(task)) {
+        void upsertTask(task);
+      }
+    });
   };
 
   // Compute the next task list from current state and persist it to the backend.
@@ -408,7 +430,16 @@ export default function App() {
     const normalizedEmail = normalizeEmail(email);
     const profile = await fetchUserProfileByEmail(normalizedEmail);
 
-    const resolvedRole = (profile?.role as UserRole | undefined) ?? fallbackRole;
+    // Preserve the role the user actually logged in with. Auth events such as
+    // TOKEN_REFRESHED (fired when a background tab regains focus) re-run this with a
+    // generic fallback role, so without this the account would silently downgrade.
+    const stored = restoreStoredSession();
+    const storedRole =
+      stored && normalizeEmail(stored.email ?? "").toLowerCase() === normalizedEmail.toLowerCase()
+        ? (stored.role as UserRole | undefined)
+        : undefined;
+
+    const resolvedRole = (profile?.role as UserRole | undefined) ?? storedRole ?? fallbackRole;
     const resolvedName = profile?.full_name || fallbackName || normalizedEmail;
 
     setUserRole(resolvedRole);
