@@ -6,6 +6,7 @@ import {
 import { Task, TeamMember, TaskComment, TaskStatus, TaskPriority } from "../types";
 import { extractHyperlinkDetails } from "../lib/canvaTemplates";
 import { formatCommentDetails, handleBulletKeyDown, RenderFormattedComment } from "../lib/commentUtils";
+import { getPreferredFirstName } from "../lib/memberUtils";
 import GoogleDocShareWidget from "./GoogleDocShareWidget";
 import { shareGoogleDocWithMember } from "../lib/googleDriveShare";
 
@@ -37,7 +38,6 @@ export default function TaskDetailsModal({
   onTriggerCritiqueTab,
 }: TaskDetailsModalProps) {
   const [commentText, setCommentText] = useState("");
-  const isLayoutEditor = currentUserRole === "Layout Editor";
   const isEditorOrDeputy = currentUserRole === "Layout Editor" || currentUserRole === "Layout Deputy" || currentUserRole === "Online Layout Head";
 
   const isAssignedStaffer = (task.illusLayout || "").toLowerCase().includes((currentUserName || "").toLowerCase()) || 
@@ -45,6 +45,12 @@ export default function TaskDetailsModal({
     (currentUserEmail && (task.illusLayout || "").toLowerCase().includes(currentUserEmail.toLowerCase()));
 
   const canViewThisTaskComments = isEditorOrDeputy || isAssignedStaffer;
+
+  // Once a task has an assignee, only that assigned account may change the workflow
+  // fields (status / priority / assignee). Editor & Deputy may still set them while the
+  // task is unassigned so it can be handed out in the first place.
+  const hasAssignee = Boolean(task.illusLayout) && task.illusLayout !== "Unassigned";
+  const canEditCoreFields = isAssignedStaffer || (!hasAssignee && isEditorOrDeputy);
 
   const speakText = (text: string) => {
     if (!speechEnabled) return;
@@ -130,14 +136,34 @@ export default function TaskDetailsModal({
                 {task.title}
               </h2>
             </div>
-            
-            <button 
-              onClick={onClose}
-              className="p-1 bg-gray-50 dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded-full text-gray-400 hover:text-gray-800 dark:hover:text-neutral-200 transition-all shrink-0 cursor-pointer"
-              aria-label="Close details modal"
-            >
-              <X className="w-5 h-5" />
-            </button>
+
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Deadline — visible to all, editable only by Editor / Deputy */}
+              <div className="flex items-center gap-1.5" title="Task deadline">
+                <Calendar className="w-4 h-4 text-gray-400 dark:text-neutral-400 shrink-0" />
+                {isEditorOrDeputy ? (
+                  <input
+                    type="date"
+                    value={/^\d{4}-\d{2}-\d{2}$/.test(task.releaseDate || "") ? task.releaseDate : ""}
+                    onChange={(e) => onUpdateTask({ ...task, releaseDate: e.target.value, lastUpdated: new Date().toISOString() })}
+                    className="px-2 py-1 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg text-[11px] font-semibold text-gray-700 dark:text-neutral-200 outline-none focus:ring-2 focus:ring-brand-maroon cursor-pointer"
+                    aria-label="Change task deadline"
+                  />
+                ) : (
+                  <span className="px-2 py-1 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg text-[11px] font-semibold text-gray-700 dark:text-neutral-200">
+                    {task.releaseDate || "No deadline"}
+                  </span>
+                )}
+              </div>
+
+              <button
+                onClick={onClose}
+                className="p-1 bg-gray-50 dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded-full text-gray-400 hover:text-gray-800 dark:hover:text-neutral-200 transition-all shrink-0 cursor-pointer"
+                aria-label="Close details modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           {/* Editors Inputs */}
@@ -147,8 +173,9 @@ export default function TaskDetailsModal({
               <label className="text-gray-400 dark:text-neutral-400 block font-semibold mb-1">Status</label>
               <select
                 value={task.progress}
+                disabled={!canEditCoreFields}
                 onChange={(e) => handleStatusChange(e.target.value as TaskStatus)}
-                className="w-full px-2.5 py-1.5 sm:py-2 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg font-semibold text-gray-800 dark:text-neutral-200 outline-none focus:ring-2 focus:ring-brand-maroon cursor-pointer"
+                className={`w-full px-2.5 py-1.5 sm:py-2 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg font-semibold text-gray-800 dark:text-neutral-200 outline-none focus:ring-2 focus:ring-brand-maroon ${canEditCoreFields ? "cursor-pointer" : "opacity-60 cursor-not-allowed"}`}
               >
                 <option value="Not Started">Not Started</option>
                 <option value="Assigned">Assigned</option>
@@ -164,8 +191,9 @@ export default function TaskDetailsModal({
               <label className="text-gray-400 dark:text-neutral-400 block font-semibold mb-1">Priority</label>
               <select
                 value={task.priority}
+                disabled={!canEditCoreFields}
                 onChange={(e) => handlePriorityChange(e.target.value as TaskPriority)}
-                className="w-full px-2.5 py-1.5 sm:py-2 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg font-semibold text-gray-800 dark:text-neutral-200 outline-none focus:ring-2 focus:ring-brand-maroon cursor-pointer"
+                className={`w-full px-2.5 py-1.5 sm:py-2 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg font-semibold text-gray-800 dark:text-neutral-200 outline-none focus:ring-2 focus:ring-brand-maroon ${canEditCoreFields ? "cursor-pointer" : "opacity-60 cursor-not-allowed"}`}
               >
                 <option value="Low">Low</option>
                 <option value="Medium">Medium</option>
@@ -178,13 +206,17 @@ export default function TaskDetailsModal({
               <label className="text-gray-400 dark:text-neutral-400 block font-semibold mb-1">Assignee</label>
               <select
                 value={task.illusLayout}
+                disabled={!canEditCoreFields}
                 onChange={(e) => handleAssigneeChange(e.target.value)}
-                className="w-full px-2.5 py-1.5 sm:py-2 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg font-semibold text-gray-800 dark:text-neutral-200 outline-none focus:ring-2 focus:ring-brand-maroon cursor-pointer"
+                className={`w-full px-2.5 py-1.5 sm:py-2 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg font-semibold text-gray-800 dark:text-neutral-200 outline-none focus:ring-2 focus:ring-brand-maroon ${canEditCoreFields ? "cursor-pointer" : "opacity-60 cursor-not-allowed"}`}
               >
                 <option value="Unassigned">Unassigned</option>
-                {members.map(m => (
-                  <option key={m.id} value={m.name}>{m.name.split(",")[0]}</option>
-                ))}
+                {members.map(m => {
+                  const firstName = getPreferredFirstName(m.name, m.email);
+                  return (
+                    <option key={m.id} value={firstName}>{firstName}</option>
+                  );
+                })}
               </select>
             </div>
 
@@ -218,7 +250,7 @@ export default function TaskDetailsModal({
                 <p className="text-[10px] text-gray-500 dark:text-neutral-400 italic">No design workspace link attached yet.</p>
               )}
 
-              {isLayoutEditor && (
+              {isEditorOrDeputy && (
                 <div className="space-y-1">
                   <label className="text-[9px] text-gray-400 dark:text-neutral-400 font-semibold block">Update/Attach Canva Link</label>
                   <input
@@ -267,7 +299,7 @@ export default function TaskDetailsModal({
                 <p className="text-[10px] text-gray-500 dark:text-neutral-400 italic">No illustration link attached yet.</p>
               )}
 
-              {isLayoutEditor && (
+              {isEditorOrDeputy && (
                 <div className="space-y-1">
                   <label className="text-[9px] text-gray-400 dark:text-neutral-400 font-semibold block">Update Illustration Link</label>
                   <input
@@ -316,18 +348,6 @@ export default function TaskDetailsModal({
                   Submit for Review
                 </button>
               )}
-              {currentUserRole === "Layout Editor" && task.progress !== "Completed" && task.progress !== "Approved" && (
-                <button
-                  onClick={() => {
-                    const updated = { ...task, progress: "Approved" as const, lastUpdated: new Date().toISOString() };
-                    onUpdateTask(updated);
-                    speakText("Approved and sent to EIC.");
-                  }}
-                  className="px-2.5 sm:px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition-all text-[11px] cursor-pointer whitespace-nowrap flex-1 sm:flex-initial text-center"
-                >
-                  Approve & Submit EIC
-                </button>
-              )}
               {(task.progress === "For Review" || task.progress === "In Progress" || task.progress === "Approved") && (
                 <button
                   onClick={() => {
@@ -341,16 +361,6 @@ export default function TaskDetailsModal({
                 </button>
               )}
             </div>
-          </div>
-
-          <div className="space-y-1.5 text-xs">
-            <span className="font-semibold text-gray-500 dark:text-neutral-400 flex items-center gap-1.5">
-              <Calendar className="w-4 h-4 text-gray-400" />
-              Editorial Schedule
-            </span>
-            <p className="text-gray-600 dark:text-neutral-300 bg-gray-50 dark:bg-neutral-800 p-2.5 rounded-lg font-medium border border-gray-100 dark:border-neutral-700">
-              Target Release date set for: <span className="font-bold text-brand-maroon dark:text-red-400">{task.releaseDate}</span> (Writeup identifier: <span className="font-mono">{task.writeup}</span>)
-            </p>
           </div>
 
         </div>
