@@ -175,20 +175,20 @@ export function CanvaDirectory({ currentUserRole }: CanvaDirectoryProps = {}) {
   });
 
   return (
-    <div className="bg-white dark:bg-neutral-900 border border-neutral-200/70 dark:border-neutral-800 rounded-xl sm:rounded-2xl shadow-sm overflow-hidden text-left transition-all">
+    <div className="bg-white border border-neutral-200/70 rounded-xl sm:rounded-2xl shadow-sm overflow-hidden text-left transition-all">
       {/* Header bar */}
-      <div
+      <div 
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-3 sm:px-5 py-2.5 sm:py-4 bg-gradient-to-r from-neutral-50 to-neutral-100/50 dark:from-neutral-800 dark:to-neutral-800/50 flex items-center justify-between border-b border-neutral-150 dark:border-neutral-700 cursor-pointer hover:bg-neutral-100/30 dark:hover:bg-neutral-700/30 transition-all"
+        className="w-full px-3 sm:px-5 py-2.5 sm:py-4 bg-gradient-to-r from-neutral-50 to-neutral-100/50 flex items-center justify-between border-b border-neutral-150 cursor-pointer hover:bg-neutral-100/30 transition-all"
       >
         <div className="flex items-center gap-2 sm:gap-2.5">
-          <div className="p-1 sm:p-1.5 bg-[#bc1700]/10 dark:bg-[#bc1700]/20 rounded-lg sm:rounded-xl text-[#bc1700] dark:text-red-400">
+          <div className="p-1 sm:p-1.5 bg-[#bc1700]/10 rounded-lg sm:rounded-xl text-[#bc1700]">
             <LayoutGrid className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
           </div>
           <div>
-            <h3 className="font-sans font-black text-xs sm:text-sm text-stone-900 dark:text-white tracking-tight flex items-center gap-1.5">
+            <h3 className="font-sans font-black text-xs sm:text-sm text-stone-900 tracking-tight flex items-center gap-1.5">
               Canva Template Directory
-              <span className="text-[9px] sm:text-[10px] font-mono font-bold bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 px-1.5 py-0.5 rounded-full">
+              <span className="text-[9px] sm:text-[10px] font-mono font-bold bg-neutral-200 text-neutral-700 px-1.5 py-0.5 rounded-full">
                 {allTemplates.length} Items
               </span>
             </h3>
@@ -198,7 +198,7 @@ export function CanvaDirectory({ currentUserRole }: CanvaDirectoryProps = {}) {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {isOpen ? <ChevronUp className="w-4 h-4 text-stone-500 dark:text-neutral-400" /> : <ChevronDown className="w-4 h-4 text-stone-500 dark:text-neutral-400" />}
+          {isOpen ? <ChevronUp className="w-4 h-4 text-stone-500" /> : <ChevronDown className="w-4 h-4 text-stone-500" />}
         </div>
       </div>
 
@@ -208,13 +208,13 @@ export function CanvaDirectory({ currentUserRole }: CanvaDirectoryProps = {}) {
           <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
             {/* Search */}
             <div className="relative w-full sm:max-w-xs">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 dark:text-neutral-500" />
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
               <input
                 type="text"
                 placeholder="Search Canva template..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 text-xs border border-neutral-250 dark:border-neutral-700 bg-white dark:bg-neutral-900 dark:text-white rounded-xl focus:ring-1 focus:ring-[#bc1700] outline-none"
+                className="w-full pl-9 pr-3 py-1.5 text-xs border border-neutral-250 bg-white rounded-xl focus:ring-1 focus:ring-[#bc1700] outline-none"
               />
             </div>
 
@@ -232,7 +232,7 @@ export function CanvaDirectory({ currentUserRole }: CanvaDirectoryProps = {}) {
 
                   <button
                     onClick={handleResetDefaults}
-                    className="p-1.5 text-stone-400 dark:text-neutral-500 hover:text-stone-700 dark:hover:text-neutral-300 hover:bg-stone-50 dark:hover:bg-neutral-800 rounded-lg transition-all cursor-pointer"
+                    className="p-1.5 text-stone-400 hover:text-stone-700 hover:bg-stone-50 rounded-lg transition-all cursor-pointer"
                     title="Reset all to defaults"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
@@ -244,19 +244,19 @@ export function CanvaDirectory({ currentUserRole }: CanvaDirectoryProps = {}) {
 
           {/* Add New Template Inline Form Modal */}
           {showAddForm && (
-            <form
+            <form 
               onSubmit={handleAddTemplateSubmit}
-              className="p-4 bg-red-50/50 dark:bg-red-950/30 border border-red-200/80 dark:border-red-900/50 rounded-xl space-y-3 animate-fade-in"
+              className="p-4 bg-red-50/50 border border-red-200/80 rounded-xl space-y-3 animate-fade-in"
             >
-              <div className="flex items-center justify-between border-b border-red-200/50 dark:border-red-900/30 pb-2">
-                <h4 className="font-sans font-bold text-xs text-[#bc1700] dark:text-red-400 flex items-center gap-1.5">
+              <div className="flex items-center justify-between border-b border-red-200/50 pb-2">
+                <h4 className="font-sans font-bold text-xs text-[#bc1700] flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5" />
                   Add New Canva Template
                 </h4>
-                <button
-                  type="button"
+                <button 
+                  type="button" 
                   onClick={() => setShowAddForm(false)}
-                  className="p-1 text-stone-400 dark:text-neutral-500 hover:text-stone-700 dark:hover:text-neutral-300 rounded-md"
+                  className="p-1 text-stone-400 hover:text-stone-700 rounded-md"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -264,23 +264,23 @@ export function CanvaDirectory({ currentUserRole }: CanvaDirectoryProps = {}) {
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                 <div>
-                  <label className="block text-[10px] font-bold text-stone-700 dark:text-neutral-300 mb-1">Template Name</label>
-                  <input
+                  <label className="block text-[10px] font-bold text-stone-700 mb-1">Template Name</label>
+                  <input 
                     type="text"
                     required
                     placeholder="e.g. Infographics Pubmat"
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
-                    className="w-full px-2.5 py-1.5 border border-stone-300 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-900 dark:text-white outline-none focus:ring-1 focus:ring-[#bc1700]"
+                    className="w-full px-2.5 py-1.5 border border-stone-300 rounded-lg bg-white outline-none focus:ring-1 focus:ring-[#bc1700]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-stone-700 dark:text-neutral-300 mb-1">Category</label>
+                  <label className="block text-[10px] font-bold text-stone-700 mb-1">Category</label>
                   <select
                     value={newCategory}
                     onChange={(e) => setNewCategory(e.target.value as any)}
-                    className="w-full px-2.5 py-1.5 border border-stone-300 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-900 dark:text-white outline-none focus:ring-1 focus:ring-[#bc1700] cursor-pointer"
+                    className="w-full px-2.5 py-1.5 border border-stone-300 rounded-lg bg-white outline-none focus:ring-1 focus:ring-[#bc1700] cursor-pointer"
                   >
                     <option value="Branding & Gen">Branding & Gen</option>
                     <option value="Editorial">Editorial</option>
@@ -289,14 +289,14 @@ export function CanvaDirectory({ currentUserRole }: CanvaDirectoryProps = {}) {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-stone-700 dark:text-neutral-300 mb-1">Canva Link</label>
-                  <input
+                  <label className="block text-[10px] font-bold text-stone-700 mb-1">Canva Link</label>
+                  <input 
                     type="text"
                     required
                     placeholder="https://canva.link/..."
                     value={newLink}
                     onChange={(e) => setNewLink(e.target.value)}
-                    className="w-full px-2.5 py-1.5 border border-stone-300 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-900 dark:text-white outline-none focus:ring-1 focus:ring-[#bc1700]"
+                    className="w-full px-2.5 py-1.5 border border-stone-300 rounded-lg bg-white outline-none focus:ring-1 focus:ring-[#bc1700]"
                   />
                 </div>
               </div>
@@ -305,7 +305,7 @@ export function CanvaDirectory({ currentUserRole }: CanvaDirectoryProps = {}) {
                 <button
                   type="button"
                   onClick={() => setShowAddForm(false)}
-                  className="px-3 py-1.5 bg-stone-100 dark:bg-neutral-800 hover:bg-stone-200 dark:hover:bg-neutral-700 text-stone-700 dark:text-neutral-300 text-xs font-bold rounded-lg cursor-pointer"
+                  className="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold rounded-lg cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -327,19 +327,19 @@ export function CanvaDirectory({ currentUserRole }: CanvaDirectoryProps = {}) {
               const hasCopied = copiedId === t.id;
 
               return (
-                <div
+                <div 
                   key={t.id}
-                  className="p-3 rounded-xl border border-neutral-150 dark:border-neutral-700 bg-neutral-50/50 dark:bg-neutral-800/50 hover:bg-neutral-50 dark:hover:bg-neutral-800 hover:border-neutral-200 dark:hover:border-neutral-600 transition-all flex flex-col justify-between space-y-2 group relative"
+                  className="p-3 rounded-xl border border-neutral-150 bg-neutral-50/50 hover:bg-neutral-50 hover:border-neutral-200 transition-all flex flex-col justify-between space-y-2 group relative"
                 >
                   {/* Item badge/meta */}
                   <div className="flex items-center justify-between">
-                    <span className="text-[9px] font-mono font-bold bg-[#bc1700]/5 dark:bg-[#bc1700]/20 text-[#bc1700] dark:text-red-400 px-2 py-0.5 rounded">
+                    <span className="text-[9px] font-mono font-bold bg-[#bc1700]/5 text-[#bc1700] px-2 py-0.5 rounded">
                       {t.category}
                     </span>
                     {t.isCustom && (
                       <button
                         onClick={() => handleDeleteCustomTemplate(t.id)}
-                        className="text-stone-400 dark:text-neutral-500 hover:text-red-600 dark:hover:text-red-400 transition-all cursor-pointer"
+                        className="text-stone-400 hover:text-red-600 transition-all cursor-pointer"
                         title="Delete custom template"
                       >
                         <Trash2 className="w-3 h-3" />
@@ -349,15 +349,15 @@ export function CanvaDirectory({ currentUserRole }: CanvaDirectoryProps = {}) {
 
                   {/* Title and URL */}
                   <div>
-                    <h4 className="font-sans font-black text-xs text-stone-900 dark:text-white">{t.name}</h4>
-
+                    <h4 className="font-sans font-black text-xs text-stone-900">{t.name}</h4>
+                    
                     {isEditing ? (
                       <div className="flex items-center gap-1 mt-1">
                         <input
                           type="text"
                           value={editValue}
                           onChange={(e) => setEditValue(e.target.value)}
-                          className="flex-1 px-2 py-1 text-[10px] border border-neutral-300 dark:border-neutral-700 rounded bg-white dark:bg-neutral-900 dark:text-white font-mono focus:ring-1 focus:ring-[#bc1700] outline-none"
+                          className="flex-1 px-2 py-1 text-[10px] border border-neutral-300 rounded bg-white font-mono focus:ring-1 focus:ring-[#bc1700] outline-none"
                           placeholder="Paste Canva URL here"
                         />
                         <button
@@ -369,7 +369,7 @@ export function CanvaDirectory({ currentUserRole }: CanvaDirectoryProps = {}) {
                         </button>
                       </div>
                     ) : (
-                      <p className="text-[9px] text-stone-500 dark:text-neutral-400 font-mono truncate mt-0.5" title={currentUrl}>
+                      <p className="text-[9px] text-stone-500 font-mono truncate mt-0.5" title={currentUrl}>
                         {currentUrl}
                       </p>
                     )}
@@ -377,13 +377,13 @@ export function CanvaDirectory({ currentUserRole }: CanvaDirectoryProps = {}) {
 
                   {/* Action buttons */}
                   {!isEditing && (
-                    <div className="flex items-center gap-1.5 pt-1 border-t border-neutral-200/30 dark:border-neutral-700/30">
+                    <div className="flex items-center gap-1.5 pt-1 border-t border-neutral-200/30">
                       {/* Open design */}
                       <a
                         href={currentUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex-1 py-1 px-2 bg-white dark:bg-neutral-900 hover:bg-stone-50 dark:hover:bg-neutral-800 text-stone-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 text-[10px] font-bold rounded-lg flex items-center justify-center gap-1 hover:text-stone-900 dark:hover:text-white transition-all"
+                        className="flex-1 py-1 px-2 bg-white hover:bg-stone-50 text-stone-700 border border-neutral-200 text-[10px] font-bold rounded-lg flex items-center justify-center gap-1 hover:text-stone-900 transition-all"
                       >
                         <span>Launch</span>
                         <ExternalLink className="w-2.5 h-2.5" />
@@ -392,7 +392,7 @@ export function CanvaDirectory({ currentUserRole }: CanvaDirectoryProps = {}) {
                       {/* Copy Link */}
                       <button
                         onClick={() => handleCopyLink(t.id, currentUrl)}
-                        className={`p-1 border border-neutral-200 dark:border-neutral-700 text-stone-500 dark:text-neutral-400 hover:text-stone-850 dark:hover:text-neutral-300 rounded-lg bg-white dark:bg-neutral-900 cursor-pointer transition-all ${hasCopied ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400" : ""}`}
+                        className={`p-1 border border-neutral-200 text-stone-500 hover:text-stone-850 rounded-lg bg-white cursor-pointer transition-all ${hasCopied ? "bg-emerald-50 border-emerald-300 text-emerald-700" : ""}`}
                         title="Copy to Clipboard"
                       >
                         {hasCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
@@ -402,7 +402,7 @@ export function CanvaDirectory({ currentUserRole }: CanvaDirectoryProps = {}) {
                       {!isLayoutStaff && (
                         <button
                           onClick={() => handleEditStart(t.id, currentUrl)}
-                          className="p-1 border border-neutral-200 dark:border-neutral-700 text-stone-500 dark:text-neutral-400 hover:text-stone-850 dark:hover:text-neutral-300 hover:border-neutral-300 dark:hover:border-neutral-600 rounded-lg bg-white dark:bg-neutral-900 cursor-pointer transition-all"
+                          className="p-1 border border-neutral-200 text-stone-500 hover:text-stone-850 hover:border-neutral-300 rounded-lg bg-white cursor-pointer transition-all"
                           title="Edit Canva Link"
                         >
                           <Edit2 className="w-3 h-3" />
@@ -415,7 +415,7 @@ export function CanvaDirectory({ currentUserRole }: CanvaDirectoryProps = {}) {
             })}
 
             {filteredTemplates.length === 0 && (
-              <div className="col-span-full py-8 text-center text-xs text-stone-400 dark:text-neutral-500 font-medium">
+              <div className="col-span-full py-8 text-center text-xs text-stone-400 font-medium">
                 No matching Canva templates found.
               </div>
             )}

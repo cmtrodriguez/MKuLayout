@@ -748,21 +748,21 @@ export default function DashboardOverview({
                   </div>
                 ) : (
                   announcements.map((ann) => (
-                    <div
-                      key={ann.id}
-                      className="p-2.5 sm:p-3 bg-neutral-50/70 dark:bg-neutral-800/90 hover:bg-neutral-50 dark:hover:bg-neutral-800 rounded-xl sm:rounded-2xl border border-neutral-200/30 dark:border-neutral-700 transition-all space-y-1.5 relative group"
+                    <div 
+                      key={ann.id} 
+                      className="p-2.5 sm:p-3 bg-neutral-50/70 dark:bg-neutral-800/70 hover:bg-neutral-50 dark:hover:bg-neutral-800 rounded-xl sm:rounded-2xl border border-neutral-200/30 dark:border-neutral-700 transition-all space-y-1.5 relative group"
                     >
                       <div className="flex justify-between items-start gap-2">
-                        <h4 className="font-bold text-neutral-950 dark:text-white text-xs tracking-tight">
+                        <h4 className="font-bold text-neutral-950 dark:text-neutral-100 text-xs tracking-tight">
                           {ann.title}
                         </h4>
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[8px] sm:text-[9px] font-mono text-neutral-400 dark:text-neutral-400 font-semibold">{ann.date}</span>
+                          <span className="text-[8px] sm:text-[9px] font-mono text-neutral-400 dark:text-neutral-500 font-semibold">{ann.date}</span>
                           {isEditorOrDeputy && (
                             <button
                               type="button"
                               onClick={() => handleDeleteAnnouncement(ann.id)}
-                              className="text-neutral-400 dark:text-neutral-400 hover:text-red-600 dark:hover:text-red-400 p-0.5 rounded cursor-pointer opacity-70 group-hover:opacity-100 transition-opacity"
+                              className="text-neutral-400 hover:text-red-600 p-0.5 rounded cursor-pointer opacity-70 group-hover:opacity-100 transition-opacity"
                               title="Delete announcement"
                             >
                               <Trash2 className="w-3 h-3" />
@@ -770,7 +770,7 @@ export default function DashboardOverview({
                           )}
                         </div>
                       </div>
-                      <p className="text-[10px] sm:text-[11px] text-neutral-600 dark:text-neutral-200 leading-relaxed">
+                      <p className="text-[10px] sm:text-[11px] text-neutral-600 dark:text-neutral-300 leading-relaxed">
                         {ann.content}
                       </p>
                       <div className="flex items-center justify-between pt-1 border-t border-neutral-200/10 dark:border-neutral-700/50">

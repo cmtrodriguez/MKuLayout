@@ -394,9 +394,9 @@ export default function ProfileSettings({
                 <div>
                   <div className="flex items-center gap-2 text-brand-maroon dark:text-red-400">
                     <Award className="w-4 h-4" />
-                    <h4 className="font-bold text-xs text-gray-900 dark:text-white">Workload Tracker</h4>
+                    <h4 className="font-bold text-xs text-gray-900 dark:text-neutral-100">Workload Tracker</h4>
                   </div>
-                  <p className="text-[10px] text-gray-500 dark:text-neutral-300 mt-1">Monthly and semester workload overview</p>
+                  <p className="text-[10px] text-gray-500 dark:text-neutral-400 mt-1">Monthly and semester workload overview</p>
                 </div>
                 <div className="inline-flex rounded-lg border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-0.5">
                   <button
@@ -419,15 +419,15 @@ export default function ProfileSettings({
               {statsMode === "semester" ? (
                 <div className="grid grid-cols-3 gap-3 text-center">
                   <div className="rounded-xl border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-2.5">
-                    <div className="text-[9px] uppercase text-gray-400 dark:text-neutral-400">Total</div>
-                    <div className="font-black text-base text-gray-900 dark:text-white">{memberTasks.length}</div>
+                    <div className="text-[9px] uppercase text-gray-400 dark:text-neutral-500">Total</div>
+                    <div className="font-black text-base text-gray-900 dark:text-neutral-100">{memberTasks.length}</div>
                   </div>
                   <div className="rounded-xl border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-2.5">
-                    <div className="text-[9px] uppercase text-gray-400 dark:text-neutral-400">Completed</div>
-                    <div className="font-black text-base text-emerald-600 dark:text-emerald-400">{completedWork}</div>
+                    <div className="text-[9px] uppercase text-gray-400 dark:text-neutral-500">Completed</div>
+                    <div className="font-black text-base text-emerald-600">{completedWork}</div>
                   </div>
                   <div className="rounded-xl border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-2.5">
-                    <div className="text-[9px] uppercase text-gray-400 dark:text-neutral-400">Active</div>
+                    <div className="text-[9px] uppercase text-gray-400 dark:text-neutral-500">Active</div>
                     <div className="font-black text-base text-brand-maroon dark:text-red-400">{activeWork}</div>
                   </div>
                 </div>
