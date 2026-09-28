@@ -627,82 +627,52 @@ export default function SheetsSync({
       )
     );
 
-    const sharedFields: Partial<Task> = {
-      title,
-      typeOfContent,
-      writer,
-      illusLayout,
-      graphicsIllus,
-      graphics: graphicsIllus,
-      onlineHandler,
-      draftLink,
-      writeup: draftLink,
-      addedToLayout,
-      progress: "Pending" as any,
-      priority: "Medium",
-      isPendingConfirmation: true,
-      sourceIssueRowId,
-      files: [],
-      commentsCount: 0,
-      revisionCount: 0,
-      lastUpdated: new Date().toISOString(),
-      releaseDate: "JULY 15"
-    };
-
     if (existingIndex !== -1) {
       // Row was EDITED: Sync attributes and trigger pending publication request in Online Pubmat
-      // Update both issue and online companion tasks
       const ext = updatedTasksList[existingIndex];
-      const baseTitle = title.replace(/\s*\(Online Pubmat\)$/i, "").trim();
-      
-      // Update the existing task
       updatedTasksList[existingIndex] = {
         ...ext,
-        ...sharedFields,
-        title: baseTitle,
-        typeOfRelease: "Issue Article"
-      };
-
-      // Find and update the companion online task
-      const onlineCompanionIndex = updatedTasksList.findIndex(t =>
-        t.sourceIssueRowId === sourceIssueRowId &&
-        (t.typeOfRelease === "Online Article" || t.title.includes("(Online Pubmat)"))
-      );
-
-      if (onlineCompanionIndex !== -1) {
-        updatedTasksList[onlineCompanionIndex] = {
-          ...updatedTasksList[onlineCompanionIndex],
-          ...sharedFields,
-          title: `${baseTitle} (Online Pubmat)`,
-          typeOfRelease: "Online Article"
-        };
-      } else {
-        // Create online companion if it doesn't exist
-        const onlineTask: Task = {
-          ...sharedFields,
-          id: `online-task-${sourceIssueRowId}`,
-          title: `${baseTitle} (Online Pubmat)`,
-          typeOfRelease: "Online Article"
-        };
-        updatedTasksList.push(onlineTask);
-      }
-    } else {
-      // Completely NEW row added: Create both Issue and Online Pubmat tasks
-      const issueTask: Task = {
-        ...sharedFields,
-        id: `issue-task-${sourceIssueRowId}`,
         title,
-        typeOfRelease: "Issue Article"
+        typeOfContent,
+        writer,
+        illusLayout,
+        graphicsIllus: graphicsIllus || ext.graphicsIllus,
+        graphics: graphicsIllus || ext.graphics,
+        onlineHandler: onlineHandler || ext.onlineHandler,
+        progress: "Pending" as any,
+        isPendingConfirmation: true, // Dispatch request to Online Pubmat on edit!
+        draftLink: draftLink || ext.draftLink,
+        writeup: draftLink || ext.writeup,
+        addedToLayout: addedToLayout || ext.addedToLayout,
+        sourceIssueRowId: ext.sourceIssueRowId || sourceIssueRowId,
+        lastUpdated: new Date().toISOString()
       };
-
-      const onlineTask: Task = {
-        ...sharedFields,
-        id: `online-task-${sourceIssueRowId}`,
-        title: `${title} (Online Pubmat)`,
-        typeOfRelease: "Online Article"
+    } else {
+      // Completely NEW row added: Trigger pending Online Pubmat Entry
+      const newTask: Task = {
+        id: `sheet-t-${Date.now()}`,
+        title,
+        typeOfRelease: "Issue Article",
+        typeOfContent,
+        writer,
+        illusLayout,
+        graphicsIllus,
+        graphics: graphicsIllus,
+        onlineHandler,
+        progress: "Pending" as any,
+        priority: "Medium",
+        draftLink,
+        writeup: draftLink,
+        addedToLayout,
+        isPendingConfirmation: true, // Dispatches request to Online Pubmat!
+        sourceIssueRowId,
+        files: [],
+        commentsCount: 0,
+        revisionCount: 0,
+        lastUpdated: new Date().toISOString(),
+        releaseDate: "JULY 15"
       };
-
-      updatedTasksList.push(issueTask, onlineTask);
+      updatedTasksList.push(newTask);
     }
 
     onUpdateTasks(updatedTasksList);
@@ -1453,7 +1423,7 @@ export default function SheetsSync({
                         setShowDeleteConfirmModal(true);
                       }}
                       title="Delete Sheet"
-                      className="p-1 px-2 text-neutral-400 hover:text-[var(--color-brand-maroon)] hover:bg-[var(--color-brand-maroon-light)] cursor-pointer"
+                      className="p-1 px-2 text-neutral-400 hover:text-red-600 hover:bg-red-50 cursor-pointer"
                     >
                       <Trash2 className="w-3 h-3" />
                     </button>
@@ -1755,7 +1725,7 @@ export default function SheetsSync({
                               isSelected ? "outline outline-2 outline-brand-maroon outline-offset-[-2px] bg-brand-maroon/5 font-semibold text-gray-950" : ""
                             } ${
                               isSectionBanner
-                                ? "bg-[var(--color-brand-maroon-light)]/70 font-bold text-neutral-900 border-y border-brand-maroon/20"
+                                ? "bg-red-50/70 font-bold text-neutral-900 border-y border-brand-maroon/20"
                                 : isMergedOrigin && highlightMerges
                                 ? "bg-amber-50/70 border border-amber-200"
                                 : ""
@@ -1780,7 +1750,7 @@ export default function SheetsSync({
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     onClick={(e) => e.stopPropagation()}
-                                    className="text-[var(--color-brand-maroon)] underline font-semibold hover:text-[var(--color-brand-maroon-dark)] inline-flex items-center gap-1 max-w-full truncate"
+                                    className="text-brand-maroon underline font-semibold hover:text-red-800 inline-flex items-center gap-1 max-w-full truncate"
                                     title={`Open link: ${url}`}
                                   >
                                     <span className="truncate">{displayTitle}</span>
@@ -1795,7 +1765,7 @@ export default function SheetsSync({
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     onClick={(e) => e.stopPropagation()}
-                                    className="text-[var(--color-brand-maroon)] underline font-semibold hover:text-[var(--color-brand-maroon-dark)] inline-flex items-center gap-1 max-w-full truncate"
+                                    className="text-brand-maroon underline font-semibold hover:text-red-800 inline-flex items-center gap-1 max-w-full truncate"
                                     title={trimmed}
                                   >
                                     <span className="truncate">{trimmed}</span>
@@ -1814,7 +1784,7 @@ export default function SheetsSync({
                         <button
                           onClick={() => handleEditRowClick(originalIndex)}
                           title="Edit Row Details"
-                          className="px-2.5 py-1 bg-[var(--color-brand-maroon)]/10 hover:bg-[var(--color-brand-maroon)] text-[var(--color-brand-maroon)] hover:text-white font-bold rounded-lg text-xs transition-all flex items-center gap-1 cursor-pointer shadow-2xs"
+                          className="px-2.5 py-1 bg-brand-maroon/10 hover:bg-brand-maroon text-brand-maroon hover:text-white font-bold rounded-lg text-xs transition-all flex items-center gap-1 cursor-pointer shadow-2xs"
                         >
                           <Edit3 className="w-3.5 h-3.5" />
                           <span>Edit</span>
@@ -1829,7 +1799,7 @@ export default function SheetsSync({
                         <button
                           onClick={() => handleDeleteRow(originalIndex)}
                           title="Delete Row"
-                          className="p-1 hover:bg-[var(--color-brand-maroon-light)] text-neutral-500 hover:text-[var(--color-brand-maroon)] rounded cursor-pointer"
+                          className="p-1 hover:bg-red-50 text-neutral-500 hover:text-red-600 rounded cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -1891,7 +1861,7 @@ export default function SheetsSync({
             
             {/* Sheet indicator stats details & Mode Switcher */}
             <div className="flex flex-wrap items-center gap-3">
-              <div className="p-2.5 bg-[var(--color-brand-maroon-light)] text-brand-maroon rounded-xl">
+              <div className="p-2.5 bg-red-50 text-brand-maroon rounded-xl">
                 <FileSpreadsheet className="w-5 h-5" />
               </div>
               <div>
@@ -2161,7 +2131,7 @@ export default function SheetsSync({
                                       key={cIdx}
                                       colSpan={mergeInfo.colSpan}
                                       rowSpan={mergeInfo.rowSpan}
-                                      className={`px-4 py-3 bg-gradient-to-r from-[var(--color-brand-maroon-light)] via-rose-50/40 to-neutral-50 border-y-2 border-brand-maroon/30 text-brand-maroon font-display font-extrabold text-xs tracking-wide shadow-2xs relative ${
+                                      className={`px-4 py-3 bg-gradient-to-r from-red-50 via-rose-50/40 to-neutral-50 border-y-2 border-brand-maroon/30 text-brand-maroon font-display font-extrabold text-xs tracking-wide shadow-2xs relative ${
                                         isSearchMatched ? "ring-2 ring-amber-400 bg-amber-50" : ""
                                       }`}
                                     >
@@ -2217,7 +2187,7 @@ export default function SheetsSync({
                                             href={url}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="text-[var(--color-brand-maroon)] underline font-semibold hover:text-[var(--color-brand-maroon-dark)] inline-flex items-center gap-1 max-w-full truncate"
+                                            className="text-brand-maroon underline font-semibold hover:text-red-800 inline-flex items-center gap-1 max-w-full truncate"
                                             title={`Open link: ${url}`}
                                           >
                                             <span className="truncate">{displayTitle}</span>
@@ -2232,7 +2202,7 @@ export default function SheetsSync({
                                             href={trimmed}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="text-[var(--color-brand-maroon)] underline font-semibold hover:text-[var(--color-brand-maroon-dark)] inline-flex items-center gap-1 max-w-full truncate"
+                                            className="text-brand-maroon underline font-semibold hover:text-red-800 inline-flex items-center gap-1 max-w-full truncate"
                                             title={trimmed}
                                           >
                                             <span className="truncate">{trimmed}</span>
@@ -2356,7 +2326,7 @@ export default function SheetsSync({
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-[var(--color-brand-maroon-light)] text-[var(--color-brand-maroon)] rounded-2xl">
+              <div className="p-3 bg-red-50 text-brand-maroon rounded-2xl">
                 <FileSpreadsheet className="w-6 h-6" />
               </div>
               <div>
@@ -2388,7 +2358,7 @@ export default function SheetsSync({
                   <button
                     onClick={handleGoogleLogout}
                     title="Disconnect Google Account"
-                    className="ml-2 p-1.5 hover:bg-neutral-200 text-neutral-500 hover:text-[var(--color-brand-maroon)] rounded-lg transition-colors cursor-pointer"
+                    className="ml-2 p-1.5 hover:bg-neutral-200 text-neutral-500 hover:text-red-600 rounded-lg transition-colors cursor-pointer"
                   >
                     <LogOut className="w-3.5 h-3.5" />
                   </button>
@@ -2494,7 +2464,7 @@ export default function SheetsSync({
 
           {/* Sync status bar */}
           {syncError ? (
-            <div className="text-[11px] font-bold text-[var(--color-brand-maroon)] bg-[var(--color-brand-maroon-light)] border border-[var(--color-brand-maroon)]/30 px-4 py-2 rounded-xl text-left flex items-center gap-1.5">
+            <div className="text-[11px] font-bold text-red-600 bg-red-50 border border-red-200 px-4 py-2 rounded-xl text-left flex items-center gap-1.5">
               <AlertCircle className="w-3.5 h-3.5" />
               <span>{syncError}</span>
             </div>
@@ -2607,7 +2577,7 @@ export default function SheetsSync({
                   )}
 
                   {configError && (
-                    <div className="p-3 bg-[var(--color-brand-maroon-light)] border border-[var(--color-brand-maroon)]/30 rounded-xl text-[var(--color-brand-maroon)] font-bold font-mono text-[10px]">
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 font-bold font-mono text-[10px]">
                       Error: {configError}
                     </div>
                   )}
@@ -2865,7 +2835,7 @@ export default function SheetsSync({
                     <div key={idx} className="space-y-1">
                       <label className="font-bold text-neutral-800 block capitalize">
                         {colName || `Column ${getColLetter(idx)}`}
-                        {colName?.toLowerCase().includes("title") && <span className="text-[var(--color-brand-maroon)] ml-0.5">*</span>}
+                        {colName?.toLowerCase().includes("title") && <span className="text-red-600 ml-0.5">*</span>}
                       </label>
 
                       {isSection ? (() => {
@@ -3148,7 +3118,7 @@ export default function SheetsSync({
       {showDeleteConfirmModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl border border-neutral-100 text-left animate-fade-in text-xs space-y-4">
-            <div className="flex items-center gap-2 text-[var(--color-brand-maroon)] font-bold text-sm">
+            <div className="flex items-center gap-2 text-red-600 font-bold text-sm">
               <AlertCircle className="w-5 h-5 shrink-0" />
               <span>Confirm Worksheet Deletion</span>
             </div>
@@ -3184,7 +3154,7 @@ export default function SheetsSync({
           <div className="bg-white rounded-3xl w-full max-w-lg p-6 shadow-2xl border border-neutral-100 text-left animate-fade-in text-xs space-y-4 max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between border-b pb-2.5">
               <div className="flex items-center gap-2">
-                <div className="p-2 bg-[var(--color-brand-maroon-light)] text-[var(--color-brand-maroon)] rounded-xl">
+                <div className="p-2 bg-red-50 text-brand-maroon rounded-xl">
                   <Layers className="w-4 h-4" />
                 </div>
                 <div>
@@ -3256,7 +3226,7 @@ export default function SheetsSync({
                         <button
                           type="button"
                           onClick={() => handleRemoveMerge(mIdx)}
-                          className="p-1.5 text-neutral-400 hover:text-[var(--color-brand-maroon)] hover:bg-[var(--color-brand-maroon-light)] rounded-lg transition-colors cursor-pointer"
+                          className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                           title="Remove this merge"
                         >
                           <Trash2 className="w-3.5 h-3.5" />

@@ -310,7 +310,7 @@ export default function LoginPage({ members, onLogin, speechEnabled, darkMode = 
               {/* Submit Button */}
               <button
                 type="submit"
-                className="w-full py-3 bg-[var(--color-brand-gradient)] text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all shadow-[0_8px_25px_rgba(188,23,0,0.2)] active:scale-[0.98] cursor-pointer mt-4"
+                className="w-full py-3 bg-gradient-to-r from-[#bc1700] to-[#660000] text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all shadow-[0_8px_25px_rgba(188,23,0,0.2)] active:scale-[0.98] cursor-pointer mt-4"
               >
                 <span>Log In</span>
                 <ArrowRight className="w-3.5 h-3.5" />

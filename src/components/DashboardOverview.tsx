@@ -388,7 +388,7 @@ export default function DashboardOverview({
                 }}
                 className={`px-2.5 sm:px-4 py-1 sm:py-2 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1 sm:gap-2 cursor-pointer flex-1 sm:flex-initial justify-center ${
                   overviewTab === "desk"
-                    ? "bg-[var(--color-brand-gradient)] text-white shadow-md shadow-red-950/20"
+                    ? "bg-gradient-to-r from-[#bc1700] to-[#660000] text-white shadow-md shadow-red-950/20"
                     : "text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200/50 dark:hover:bg-neutral-700"
                 }`}
               >
@@ -406,7 +406,7 @@ export default function DashboardOverview({
                 }}
                 className={`px-2.5 sm:px-4 py-1 sm:py-2 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1 sm:gap-2 cursor-pointer flex-1 sm:flex-initial justify-center ${
                   overviewTab === "calendar"
-                    ? "bg-[var(--color-brand-gradient)] text-white shadow-md shadow-red-950/20"
+                    ? "bg-gradient-to-r from-[#bc1700] to-[#660000] text-white shadow-md shadow-red-950/20"
                     : "text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200/50 dark:hover:bg-neutral-700"
                 }`}
               >
@@ -424,7 +424,7 @@ export default function DashboardOverview({
                 }}
                 className={`px-2.5 sm:px-4 py-1 sm:py-2 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1 sm:gap-2 cursor-pointer flex-1 sm:flex-initial justify-center ${
                   overviewTab === "polls"
-                    ? "bg-[var(--color-brand-gradient)] text-white shadow-md shadow-red-950/20"
+                    ? "bg-gradient-to-r from-[#bc1700] to-[#660000] text-white shadow-md shadow-red-950/20"
                     : "text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200/50 dark:hover:bg-neutral-700"
                 }`}
               >
@@ -669,7 +669,7 @@ export default function DashboardOverview({
                 {isEditorOrDeputy && (
                   <button
                     onClick={onAddTask}
-                    className="w-full py-2 sm:py-2.5 bg-[var(--color-brand-gradient)] hover:shadow-md text-white font-bold rounded-lg sm:rounded-xl text-[11px] sm:text-xs flex items-center justify-center gap-1.5 transition-all shadow-[0_8px_20px_rgba(188,23,0,0.15)] cursor-pointer"
+                    className="w-full py-2 sm:py-2.5 bg-gradient-to-r from-[#bc1700] to-[#660000] hover:shadow-md text-white font-bold rounded-lg sm:rounded-xl text-[11px] sm:text-xs flex items-center justify-center gap-1.5 transition-all shadow-[0_8px_20px_rgba(188,23,0,0.15)] cursor-pointer"
                   >
                     <Plus className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                     <span>Create New Assignment</span>
@@ -968,7 +968,7 @@ export default function DashboardOverview({
             {/* PERSONAL WORKLOAD & MINI CALENDAR FOR LAYOUT STAFFER & PROBI */}
             {isStaffOrProbi && (
               <div className="lg:col-span-7">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 sm:gap-4">
                   <div className="bg-white dark:bg-neutral-900 rounded-xl sm:rounded-[24px] p-3.5 sm:p-5 border border-neutral-200/60 dark:border-neutral-800 shadow-sm space-y-3.5">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-neutral-100 dark:border-neutral-800 gap-2">
                       <div>

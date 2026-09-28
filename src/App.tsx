@@ -1058,7 +1058,7 @@ export default function App() {
                   }}
                   className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide flex items-center gap-3 transition-all cursor-pointer text-left ${
                     isActive
-                      ? "bg-[var(--color-brand-gradient)] text-white font-black shadow-lg shadow-red-950/40 border-l-4 border-white"
+                      ? "bg-gradient-to-r from-[#bc1700] to-[#660000] text-white font-black shadow-lg shadow-red-950/40 border-l-4 border-white"
                       : "text-neutral-400 hover:text-white hover:bg-neutral-900/80"
                   }`}
                 >
@@ -1180,7 +1180,7 @@ export default function App() {
                       }}
                       className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-bold tracking-wide flex items-center gap-3 transition-all text-left cursor-pointer ${
                         isActive
-                          ? "bg-[var(--color-brand-gradient)] text-white shadow-sm"
+                          ? "bg-gradient-to-r from-[#bc1700] to-[#660000] text-white shadow-sm"
                           : "text-neutral-300 hover:text-white hover:bg-neutral-900"
                       }`}
                     >

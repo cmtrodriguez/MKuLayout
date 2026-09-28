@@ -149,8 +149,8 @@ export default function ProfileSettings({
         <div className="glass-card rounded-2xl p-5 sm:p-6 text-center space-y-4 relative overflow-hidden bg-white dark:bg-neutral-900 border border-gray-100 dark:border-neutral-800 shadow-sm">
           <div className="absolute top-0 inset-x-0 h-2 bg-brand-maroon" />
           
-          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[var(--color-brand-maroon)]/5 dark:bg-[var(--color-brand-maroon)]/20 rounded-full flex items-center justify-center mx-auto border-2 border-[var(--color-brand-maroon)]/20">
-            <User className="w-8 h-8 sm:w-10 sm:h-10 text-[var(--color-brand-maroon)] dark:text-red-400" />
+          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-brand-maroon/5 dark:bg-brand-maroon/20 rounded-full flex items-center justify-center mx-auto border-2 border-brand-maroon/20">
+            <User className="w-8 h-8 sm:w-10 sm:h-10 text-brand-maroon dark:text-red-400" />
           </div>
 
           <div>
@@ -161,7 +161,7 @@ export default function ProfileSettings({
           </div>
 
           <div className="flex justify-center gap-1.5 flex-wrap">
-            <span className="px-2.5 py-0.5 bg-[var(--color-brand-maroon)]/5 dark:bg-[var(--color-brand-maroon)]/20 text-[var(--color-brand-maroon)] dark:text-red-400 border border-[var(--color-brand-maroon)]/15 dark:border-[var(--color-brand-maroon)]/40 text-[10px] font-bold uppercase rounded-full">
+            <span className="px-2.5 py-0.5 bg-brand-maroon/5 dark:bg-brand-maroon/20 text-brand-maroon dark:text-red-400 border border-brand-maroon/15 dark:border-brand-maroon/40 text-[10px] font-bold uppercase rounded-full">
               {currentUserRole}
             </span>
             <span className="px-2.5 py-0.5 bg-gray-50 dark:bg-neutral-800 text-gray-500 dark:text-neutral-400 border border-gray-100 dark:border-neutral-700 text-[10px] font-bold uppercase rounded-full">
@@ -194,7 +194,7 @@ export default function ProfileSettings({
         {/* Official Account Details & Security Credentials Card */}
         <div className="glass-card rounded-2xl p-4 sm:p-5 space-y-3 bg-white dark:bg-neutral-900 border border-gray-100 dark:border-neutral-800 shadow-sm">
           <div className="flex items-center justify-between border-b pb-2 border-gray-100 dark:border-neutral-800">
-            <div className="flex items-center gap-2 text-[var(--color-brand-maroon)] dark:text-red-400">
+            <div className="flex items-center gap-2 text-brand-maroon dark:text-red-400">
               <ShieldCheck className="w-4 h-4" />
               <h4 className="font-bold text-xs text-gray-900 dark:text-neutral-100">
                 Official Account Details
@@ -352,7 +352,7 @@ export default function ProfileSettings({
 
         {/* Workspace Google Drive Integration Card */}
         <div className="glass-card rounded-2xl p-4 sm:p-5 space-y-2.5 bg-white dark:bg-neutral-900 border border-gray-100 dark:border-neutral-800 shadow-sm">
-          <div className="flex items-center gap-2 text-[var(--color-brand-maroon)] dark:text-red-400">
+          <div className="flex items-center gap-2 text-brand-maroon dark:text-red-400">
             <FolderOpen className="w-4 h-4" />
             <h4 className="font-bold text-xs text-gray-900 dark:text-neutral-100">MKule '26-'27 Layout Drive</h4>
           </div>
@@ -454,7 +454,7 @@ export default function ProfileSettings({
                           <span className="w-12 shrink-0">{month.slice(0, 3)}</span>
                           <div className="h-2.5 flex-1 rounded-full bg-gray-200 dark:bg-neutral-700 overflow-hidden">
                             <div
-                              className={`h-full rounded-full ${count > 0 ? "bg-[var(--color-brand-gradient)]" : "bg-gray-200 dark:bg-neutral-700"}`}
+                              className={`h-full rounded-full ${count > 0 ? "bg-gradient-to-r from-[#bc1700] to-[#f59e0b]" : "bg-gray-200 dark:bg-neutral-700"}`}
                               style={{ width: `${Math.min(width, 100)}%` }}
                             />
                           </div>

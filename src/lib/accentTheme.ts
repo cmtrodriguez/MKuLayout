@@ -23,8 +23,4 @@ export function applyAccentCssVars(color: AccentTheme) {
   root.style.setProperty("--color-brand-maroon-light", palette.light);
   root.style.setProperty("--color-brand-maroon-dark", palette.dark);
   root.style.setProperty("--color-brand-red", palette.primary);
-  
-  // Add gradient versions
-  root.style.setProperty("--color-brand-gradient", `linear-gradient(135deg, ${palette.primary} 0%, ${palette.dark} 100%)`);
-  root.style.setProperty("--color-brand-gradient-light", `linear-gradient(135deg, ${palette.light} 0%, ${palette.primary} 100%)`);
 }
