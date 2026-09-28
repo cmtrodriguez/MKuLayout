@@ -3,10 +3,11 @@ import {
   Calendar as CalendarIcon, Clock, Plus, Info, 
   MapPin, AlertTriangle, ChevronLeft, ChevronRight, CheckCircle2, Trash2 
 } from "lucide-react";
-import { CalendarEvent } from "../types";
+import { CalendarEvent, Task } from "../types";
 
 interface CalendarViewProps {
   events: CalendarEvent[];
+  tasks: Task[];
   speechEnabled: boolean;
   currentUserRole: string;
   onUpdateEvents: (events: CalendarEvent[]) => void;
@@ -14,6 +15,7 @@ interface CalendarViewProps {
 
 export default function CalendarView({
   events,
+  tasks,
   speechEnabled,
   currentUserRole,
   onUpdateEvents,
@@ -21,7 +23,7 @@ export default function CalendarView({
   const isEditorOrDeputy = currentUserRole === "Layout Editor" || currentUserRole === "Layout Deputy" || currentUserRole === "Online Layout Head";
   const [showAddEvent, setShowAddEvent] = useState(false);
   const [newEventTitle, setNewEventTitle] = useState("");
-  const [newEventDate, setNewEventDate] = useState("2026-07-15");
+  const [newEventDate, setNewEventDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [newEventType, setNewEventType] = useState<"deadline" | "meeting" | "workshop">("meeting");
   const [newEventDesc, setNewEventDesc] = useState("");
 
@@ -64,19 +66,49 @@ export default function CalendarView({
     }
   };
 
-  // Static July 2026 calendar metrics:
-  // July 2026 starts on a Wednesday, has 31 days.
-  const DAYS_IN_JULY = 31;
-  const START_OFFSET = 3; // Wednesday offset (Sunday=0, Mon=1, Tue=2, Wed=3)
-  
-  const daysArray = Array.from({ length: DAYS_IN_JULY }, (_, i) => i + 1);
+  // Dynamic current-month calendar so task deadlines land on the right day
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth(); // 0-based
+  const monthName = today.toLocaleString("en-US", { month: "long" });
+
+  const DAYS_IN_MONTH = new Date(year, month + 1, 0).getDate();
+  const START_OFFSET = new Date(year, month, 1).getDay(); // Sunday=0
+
+  const daysArray = Array.from({ length: DAYS_IN_MONTH }, (_, i) => i + 1);
   const emptyPrecedingCells = Array.from({ length: START_OFFSET }, (_, i) => null);
   const gridCells = [...emptyPrecedingCells, ...daysArray];
 
-  // Helper to extract events on a specific day of July 2026
+  const MONTH_NAMES = ["JANUARY","FEBRUARY","MARCH","APRIL","MAY","JUNE","JULY","AUGUST","SEPTEMBER","OCTOBER","NOVEMBER","DECEMBER"];
+
+  // Normalize a task deadline (ISO "YYYY-MM-DD" or display "MONTH D") to ISO; null if not a date
+  const toTaskISO = (raw: string): string | null => {
+    if (!raw) return null;
+    const trimmed = raw.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+    const disp = /^([A-Za-z]+)\s+(\d{1,2})(?:,?\s*(\d{4}))?$/.exec(trimmed);
+    if (disp) {
+      const mi = MONTH_NAMES.indexOf(disp[1].toUpperCase());
+      if (mi === -1) return null;
+      const yr = disp[3] ? Number(disp[3]) : year;
+      return `${yr}-${String(mi + 1).padStart(2, "0")}-${String(Number(disp[2])).padStart(2, "0")}`;
+    }
+    return null;
+  };
+
+  // Task deadlines rendered as calendar entries alongside standalone events
+  const taskEntries = tasks
+    .map(t => ({ id: `task-${t.id}`, title: t.title, start: toTaskISO(t.releaseDate || "") || "", type: "deadline" as const, isTask: true, description: "" }))
+    .filter(e => e.start);
+
+  const eventEntries = events.map(e => ({ id: e.id, title: e.title, start: e.start, type: e.type, isTask: false, description: e.description }));
+
+  const agendaItems = [...eventEntries, ...taskEntries].sort((a, b) => a.start.localeCompare(b.start));
+
+  // Helper to extract entries (events + task deadlines) on a specific day of the displayed month
   const getEventsForDay = (day: number) => {
-    const formattedDate = `2026-07-${String(day).padStart(2, "0")}`;
-    return events.filter(e => e.start.startsWith(formattedDate));
+    const formattedDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    return agendaItems.filter(e => e.start.startsWith(formattedDate));
   };
 
   return (
@@ -88,7 +120,7 @@ export default function CalendarView({
           <div className="flex items-center gap-2">
             <CalendarIcon className="w-5 h-5 text-brand-maroon" />
             <h2 className="font-display font-bold text-gray-900 text-base">
-              July 2026 Release Timeline
+              {monthName} {year} Release Timeline
             </h2>
           </div>
           
@@ -127,9 +159,9 @@ export default function CalendarView({
                 className="h-16 bg-white border border-gray-100 rounded-lg p-1.5 flex flex-col justify-between hover:border-brand-maroon/20 hover:bg-brand-cream/20 cursor-pointer transition-all"
                 onClick={() => {
                   if (dayEvents.length > 0) {
-                    speakText(`July ${day} contains ${dayEvents.length} scheduled event: ${dayEvents.map(e => e.title).join(", ")}`);
+                    speakText(`${monthName} ${day} contains ${dayEvents.length} scheduled item: ${dayEvents.map(e => e.title).join(", ")}`);
                   } else {
-                    speakText(`July ${day} calendar day has no scheduled events`);
+                    speakText(`${monthName} ${day} calendar day has no scheduled events`);
                   }
                 }}
               >
@@ -216,7 +248,7 @@ export default function CalendarView({
                 onClick={handleAddEvent}
                 className="w-full py-2 bg-brand-maroon hover:bg-brand-maroon-dark text-white font-bold rounded-lg text-xs"
               >
-                Add to July Grid
+                Add to {monthName} Grid
               </button>
             </div>
           </div>
@@ -229,12 +261,12 @@ export default function CalendarView({
           </h3>
 
           <div className="space-y-3">
-            {events.length === 0 ? (
+            {agendaItems.length === 0 ? (
               <div className="p-6 text-center text-gray-400 text-xs">
-                No events scheduled on the calendar yet.
+                No events or task deadlines scheduled on the calendar yet.
               </div>
             ) : (
-              events.map((e) => (
+              agendaItems.map((e) => (
               <div key={e.id} className="p-3 bg-gray-50/50 hover:bg-brand-cream/30 border border-gray-100 rounded-xl space-y-1 relative group">
                 <div className="flex items-center justify-between gap-2">
                   <h4 className="font-bold text-gray-900 text-xs truncate max-w-[150px]">{e.title}</h4>
@@ -243,9 +275,9 @@ export default function CalendarView({
                       e.type === "deadline" ? "bg-red-50 text-brand-red border border-red-100" :
                       e.type === "meeting" ? "bg-blue-50 text-blue-700 border border-blue-100" : "bg-green-50 text-green-700"
                     }`}>
-                      {e.type}
+                      {e.isTask ? "task deadline" : e.type}
                     </span>
-                    {isEditorOrDeputy && (
+                    {!e.isTask && isEditorOrDeputy && (
                       <button
                         type="button"
                         onClick={() => handleDeleteEvent(e.id)}

@@ -4,7 +4,7 @@ import {
   LayoutGrid, FileSpreadsheet, Kanban, GraduationCap, Calendar, 
   HelpCircle, Bot, Users, Bell, AlertOctagon, Plus, X, Shield, 
   Sparkles, ShieldCheck, HeartPulse, CheckSquare, RefreshCw, BookOpen,
-  Menu, LogOut, Link2, Sun, Moon, FileText, CheckCircle2, ExternalLink, Loader2
+  Menu, LogOut, Link2, Sun, Moon, FileText, CheckCircle2, ExternalLink, Loader2, User, ArrowRight
 } from "lucide-react";
 
 // Sub Components
@@ -84,7 +84,7 @@ export default function App() {
     } catch {
       // ignore malformed local storage values
     }
-    return [{ id: "issue-sheet-1", title: "Issue Publication Sheet", rows: issueSheetTemplate }];
+    return [{ id: "issue-sheet-1", title: "Issue Pages Sheet", rows: issueSheetTemplate }];
   });
   const issueSheetsRef = useRef(issueSheets);
   issueSheetsRef.current = issueSheets;
@@ -116,7 +116,7 @@ export default function App() {
 
   const currentIssueSheet = issueSheets.find((sheet) => sheet.id === currentIssueSheetId) ?? issueSheets[0];
   const issueRows = currentIssueSheet?.rows ?? [];
-  const issueSheetTitle = currentIssueSheet?.title ?? "Issue Publication Sheet";
+  const issueSheetTitle = currentIssueSheet?.title ?? "Issue Pages Sheet";
   const issueTaskCards = tasks.filter((task) => {
     const isIssueTask = task.typeOfRelease === "Issue Article" || (task as any).sourceIssueRowId;
     const isOnlineOnlyCompanion = task.title.includes("(Online Pubmat)") || task.typeOfRelease === "Online Article";
@@ -777,7 +777,7 @@ export default function App() {
     const nextId = `issue-sheet-${Date.now()}`;
     const nextSheet = {
       id: nextId,
-      title: `Issue Publication Sheet ${issueSheets.length + 1}`,
+      title: `Issue Pages Sheet ${issueSheets.length + 1}`,
       rows: []
     };
     updateIssueSheets((prev) => [...prev, nextSheet]);
@@ -819,7 +819,7 @@ export default function App() {
       case "Layout Editor":
         return [
           { id: "dashboard", label: "Home", icon: LayoutGrid },
-          { id: "issue-publication", label: "Issue Publication", icon: BookOpen },
+          { id: "issue-publication", label: "Issue Pages", icon: BookOpen },
           { id: "online-pubmat", label: "Online Pubmat", icon: Kanban },
           { id: "review-submissions", label: "Review Submissions", icon: ShieldCheck },
           { id: "canva-directory", label: "Canva Template Directory", icon: Link2 },
@@ -1356,7 +1356,7 @@ export default function App() {
                   <div>
                     <h3 className="font-sans font-black text-neutral-900 dark:text-neutral-100 text-base sm:text-lg flex items-center gap-2">
                       <BookOpen className="w-4 h-4 text-[#bc1700]" />
-                      Issue Publication
+                      Issue Pages
                     </h3>
                     <p className="text-[10px] sm:text-xs text-neutral-500 dark:text-neutral-400">
                       Manual publication planning sheet for issue assignment and tracking.
@@ -1528,41 +1528,92 @@ export default function App() {
                   ) : (
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-2.5">
                       {issueTaskCards.map((task) => (
-                        <button
+                        <div
                           key={task.id}
-                          type="button"
-                          onClick={() => setSelectedTask(task)}
-                          className="text-left bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-700 p-3 hover:border-[#bc1700]/60 hover:shadow-sm transition-all cursor-pointer"
+                          className="bg-white dark:bg-neutral-900 hover:shadow-md rounded-xl sm:rounded-2xl p-3.5 sm:p-5 border border-neutral-200 dark:border-neutral-700 flex flex-col justify-between space-y-2.5 sm:space-y-4 text-left transition-all"
                         >
-                          <div className="flex items-center justify-between gap-2 mb-2">
-                            <span className="px-2 py-0.5 rounded-full bg-[#bc1700]/10 text-[#bc1700] dark:text-red-400 text-[9px] font-black uppercase tracking-[0.12em]">
-                              {task.typeOfRelease || "Issue Article"}
-                            </span>
-                            <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-neutral-500 dark:text-neutral-400">
-                              {task.priority || "Medium"}
-                            </span>
-                          </div>
-
-                          <h5 className="font-sans font-black text-sm text-neutral-900 dark:text-neutral-100 leading-tight mb-2">
-                            {task.title}
-                          </h5>
-
-                          <div className="grid grid-cols-2 gap-2 text-[10px] text-neutral-600 dark:text-neutral-300">
-                            <div>
-                              <span className="block text-[8px] uppercase tracking-[0.12em] text-neutral-400 mb-0.5">Writer</span>
-                              <span className="font-semibold">{task.writer || "Unspecified"}</span>
+                          <div className="space-y-2 sm:space-y-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[9px] sm:text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-[#bc1700]/5 dark:bg-[#bc1700]/20 text-[#bc1700] dark:text-red-400 border border-[#bc1700]/10 dark:border-[#bc1700]/30">
+                                {task.typeOfRelease || "Issue Article"}
+                              </span>
+                              <span className={`text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded ${
+                                task.priority === "Urgent" ? "bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800" :
+                                task.priority === "High" ? "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800" :
+                                task.priority === "Medium" ? "bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800" :
+                                "bg-gray-100 dark:bg-neutral-800 text-gray-700 dark:text-neutral-300 border border-gray-200 dark:border-neutral-700"
+                              }`}>
+                                {task.priority || "Medium"} Priority
+                              </span>
                             </div>
+
                             <div>
-                              <span className="block text-[8px] uppercase tracking-[0.12em] text-neutral-400 mb-0.5">Layout</span>
-                              <span className="font-semibold">{task.illusLayout || "Unassigned"}</span>
+                              <h4
+                                className="font-bold text-gray-950 dark:text-neutral-100 text-xs sm:text-sm leading-snug hover:text-[#bc1700] dark:hover:text-red-400 cursor-pointer transition-all"
+                                onClick={() => setSelectedTask(task)}
+                              >
+                                {task.title}
+                              </h4>
+                              <p className="text-[9px] sm:text-[10px] text-gray-400 dark:text-neutral-400 mt-0.5 font-mono">ID: {task.writeup || task.title || "Drafting"}</p>
+                            </div>
+
+                            {task.canvaLink && (
+                              <div className="bg-cyan-50/60 dark:bg-cyan-950/40 border border-cyan-100 dark:border-cyan-800 p-1.5 sm:p-2 rounded-lg sm:rounded-xl flex items-center justify-between gap-2 text-[10px]">
+                                <span className="text-cyan-800 dark:text-cyan-300 font-medium truncate block flex-1 font-mono text-[9px] sm:text-[10px]">
+                                  {task.canvaLink}
+                                </span>
+                                <a
+                                  href={task.canvaLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-2 py-0.5 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-lg text-[8px] sm:text-[9px] flex items-center gap-0.5 shrink-0"
+                                >
+                                  Canva <ExternalLink className="w-2.5 h-2.5" />
+                                </a>
+                              </div>
+                            )}
+
+                            <div className="grid grid-cols-2 gap-1.5 sm:gap-2 pt-1.5 sm:pt-2 border-t border-gray-100 dark:border-neutral-800 text-[11px] sm:text-xs">
+                              <div>
+                                <span className="text-[9px] sm:text-[10px] text-gray-400 dark:text-neutral-400 uppercase font-semibold block">Writer</span>
+                                <span className="font-bold text-gray-700 dark:text-neutral-200 truncate block">{task.writer || "Unspecified"}</span>
+                              </div>
+                              <div>
+                                <span className="text-[9px] sm:text-[10px] text-gray-400 dark:text-neutral-400 uppercase font-semibold block">Layout Artist</span>
+                                <span className="font-bold text-gray-700 dark:text-neutral-200 truncate block flex items-center gap-1">
+                                  <User className="w-3 h-3 text-[#bc1700] dark:text-red-400 shrink-0" />
+                                  <span className="truncate">{task.illusLayout || "Unassigned"}</span>
+                                </span>
+                              </div>
                             </div>
                           </div>
 
-                          <div className="mt-2 flex items-center justify-between text-[9px] text-neutral-500 dark:text-neutral-400 border-t border-neutral-200 dark:border-neutral-700 pt-2">
-                            <span>{task.releaseDate || "Issue Board"}</span>
-                            <span className="font-semibold text-neutral-700 dark:text-neutral-200">{task.progress}</span>
+                          <div className="pt-2 sm:pt-3 border-t border-gray-100 dark:border-neutral-800 flex items-center justify-between gap-2 sm:gap-3 text-xs">
+                            <div>
+                              <span className="text-[8px] sm:text-[9px] text-gray-400 dark:text-neutral-400 font-semibold uppercase block mb-0.5 sm:mb-1">Update Status</span>
+                              <select
+                                value={task.progress}
+                                onChange={(e) => handleUpdateTasks(tasks.map(t => t.id === task.id ? { ...t, progress: e.target.value as Task["progress"], lastUpdated: new Date().toISOString() } : t))}
+                                className="px-2 sm:px-2.5 py-1 border border-gray-200 dark:border-neutral-700 rounded-lg text-[11px] sm:text-xs outline-none cursor-pointer bg-white dark:bg-neutral-800 text-gray-700 dark:text-neutral-200 focus:ring-2 focus:ring-[#bc1700]"
+                              >
+                                <option value="Not Started">Not Started</option>
+                                <option value="Assigned">Assigned</option>
+                                <option value="In Progress">In Progress</option>
+                                <option value="For Review">For Review</option>
+                                <option value="Revision Needed">Revision Needed</option>
+                                <option value="Completed">Completed</option>
+                              </select>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => setSelectedTask(task)}
+                              className="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-neutral-50 dark:bg-neutral-800 hover:bg-[#bc1700] dark:hover:bg-[#bc1700] text-[#bc1700] dark:text-red-300 hover:text-white dark:hover:text-white border border-[#bc1700]/20 dark:border-neutral-700 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
+                            >
+                              Workspace <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                            </button>
                           </div>
-                        </button>
+                        </div>
                       ))}
                     </div>
                   )}
@@ -1596,6 +1647,7 @@ export default function App() {
             {activeTab === "calendar" && (
               <CalendarView
                 events={events}
+                tasks={tasks}
                 speechEnabled={speechEnabled}
                 currentUserRole={userRole}
                 onUpdateEvents={handleUpdateEvents}

@@ -464,12 +464,8 @@ export function EicDashboard({
     );
   }
 
-  // Filter tasks requiring inspection review
-  const reviewTasks = tasks.filter(t => 
-    t.progress === "For Review" || 
-    t.progress === "Revision Needed" || 
-    (t.pubmatLink && t.progress !== "Completed")
-  );
+  // Filter tasks requiring inspection review — only those actually submitted for review
+  const reviewTasks = tasks.filter(t => t.progress === "For Review");
 
   const handleApprove = (task: Task) => {
     const isLayoutEditor = currentUserRole === "Layout Editor";

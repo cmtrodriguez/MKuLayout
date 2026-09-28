@@ -1412,6 +1412,7 @@ export default function DashboardOverview({
         <div className="bg-white dark:bg-neutral-900 rounded-3xl p-4 sm:p-6 border border-neutral-200/60 dark:border-neutral-800 shadow-sm">
           <CalendarView
             events={events}
+            tasks={tasks}
             speechEnabled={speechEnabled}
             currentUserRole={currentUserRole}
             onUpdateEvents={onUpdateEvents}
