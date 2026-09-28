@@ -168,29 +168,29 @@ export default function TeamDirectory({
     <div className="space-y-4 sm:space-y-6 text-left">
       
       {/* Search, Filters, and View Switcher */}
-      <div className="bg-white p-3 sm:p-4 rounded-xl border border-gray-100 shadow-xs space-y-3">
+      <div className="bg-white dark:bg-neutral-900 p-3 sm:p-4 rounded-xl border border-gray-100 dark:border-neutral-800 shadow-xs space-y-3">
         <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
-          
+
           {/* Search Box */}
           <div className="relative flex-1 w-full">
-            <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
+            <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400 dark:text-neutral-500" />
             <input
               type="text"
               placeholder="Search staff by display name, UP email, college (CAMP, CP, CAS, CPH), or contact..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs sm:text-sm focus:bg-white focus:ring-2 focus:ring-brand-maroon outline-none transition-all"
+              className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg text-xs sm:text-sm dark:text-white focus:bg-white dark:focus:bg-neutral-900 focus:ring-2 focus:ring-brand-maroon outline-none transition-all"
             />
           </div>
 
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full md:w-auto">
             {/* College Filter */}
-            <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5">
-              <GraduationCap className="w-3.5 h-3.5 text-gray-500" />
+            <div className="flex items-center gap-1.5 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg px-2.5 py-1.5">
+              <GraduationCap className="w-3.5 h-3.5 text-gray-500 dark:text-neutral-500" />
               <select
                 value={collegeFilter}
                 onChange={(e) => setCollegeFilter(e.target.value)}
-                className="bg-transparent text-xs font-semibold text-gray-700 outline-none cursor-pointer"
+                className="bg-transparent text-xs font-semibold text-gray-700 dark:text-neutral-300 outline-none cursor-pointer"
                 aria-label="Filter by College"
               >
                 <option value="All">All Colleges ({colleges.length})</option>
@@ -201,12 +201,12 @@ export default function TeamDirectory({
             </div>
 
             {/* Role Filter */}
-            <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5">
-              <ShieldCheck className="w-3.5 h-3.5 text-gray-500" />
+            <div className="flex items-center gap-1.5 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg px-2.5 py-1.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-gray-500 dark:text-neutral-500" />
               <select
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
-                className="bg-transparent text-xs font-semibold text-gray-700 outline-none cursor-pointer"
+                className="bg-transparent text-xs font-semibold text-gray-700 dark:text-neutral-300 outline-none cursor-pointer"
                 aria-label="Filter by Role"
               >
                 <option value="All">All Roles</option>
@@ -218,14 +218,14 @@ export default function TeamDirectory({
             </div>
 
             {/* View Mode Toggle */}
-            <div className="flex items-center bg-gray-100 p-1 rounded-lg border border-gray-200">
+            <div className="flex items-center bg-gray-100 dark:bg-neutral-800 p-1 rounded-lg border border-gray-200 dark:border-neutral-700">
               <button
                 type="button"
                 onClick={() => setViewMode("cards")}
                 className={`p-1.5 rounded-md flex items-center gap-1 text-xs font-semibold transition-all cursor-pointer ${
                   viewMode === "cards"
-                    ? "bg-white text-brand-maroon shadow-xs"
-                    : "text-gray-500 hover:text-gray-900"
+                    ? "bg-white dark:bg-neutral-900 text-brand-maroon dark:text-red-400 shadow-xs"
+                    : "text-gray-500 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-white"
                 }`}
                 title="Cards view"
               >
@@ -237,8 +237,8 @@ export default function TeamDirectory({
                 onClick={() => setViewMode("table")}
                 className={`p-1.5 rounded-md flex items-center gap-1 text-xs font-semibold transition-all cursor-pointer ${
                   viewMode === "table"
-                    ? "bg-white text-brand-maroon shadow-xs"
-                    : "text-gray-500 hover:text-gray-900"
+                    ? "bg-white dark:bg-neutral-900 text-brand-maroon dark:text-red-400 shadow-xs"
+                    : "text-gray-500 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-white"
                 }`}
                 title="Account details table"
               >
@@ -275,85 +275,85 @@ export default function TeamDirectory({
               : m.schedule?.summary || "No schedule submitted yet.";
 
             return (
-              <div 
-                key={m.id} 
-                className="glass-card rounded-2xl p-4 sm:p-5 space-y-3.5 hover:border-brand-maroon/30 hover:shadow-md transition-all text-left flex flex-col justify-between bg-white border border-gray-100"
+              <div
+                key={m.id}
+                className="glass-card rounded-2xl p-4 sm:p-5 space-y-3.5 hover:border-brand-maroon/30 dark:hover:border-brand-maroon/50 hover:shadow-md transition-all text-left flex flex-col justify-between bg-white dark:bg-neutral-900 border border-gray-100 dark:border-neutral-800"
               >
                 {/* Header info */}
                 <div className="space-y-3">
                   <div className="space-y-1">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <h3 className="font-display font-black text-gray-900 text-sm leading-snug">
+                        <h3 className="font-display font-black text-gray-900 dark:text-white text-sm leading-snug">
                           {getOfficialFullName(m.name, m.email)}
                         </h3>
                       </div>
-                      <span className="text-[10px] font-mono font-bold text-gray-700 bg-gray-100 px-2 py-0.5 rounded border border-gray-200 shrink-0">
+                      <span className="text-[10px] font-mono font-bold text-gray-700 dark:text-neutral-300 bg-gray-100 dark:bg-neutral-800 px-2 py-0.5 rounded border border-gray-200 dark:border-neutral-700 shrink-0">
                         {m.college}
                       </span>
                     </div>
 
                     <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                      <span className="text-[10px] font-bold text-brand-maroon uppercase bg-brand-maroon/5 px-2 py-0.5 rounded border border-brand-maroon/15">
+                      <span className="text-[10px] font-bold text-brand-maroon dark:text-red-400 uppercase bg-brand-maroon/5 dark:bg-brand-maroon/20 px-2 py-0.5 rounded border border-brand-maroon/15 dark:border-brand-maroon/40">
                         {m.role}
                       </span>
-                      <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                      <span className="text-[10px] font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
                         Active Account
                       </span>
                     </div>
                   </div>
 
                   {/* Workload Metric: Total Pubs Done This Semester (Replaces Points System) */}
-                  <div className="bg-neutral-50 border border-neutral-200/80 rounded-xl p-2.5 flex items-center justify-between">
+                  <div className="bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200/80 dark:border-neutral-700 rounded-xl p-2.5 flex items-center justify-between">
                     <div>
-                      <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider block">
+                      <span className="text-[9px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider block">
                         Sem 1 Pubs Done
                       </span>
-                      <p className="text-sm font-black text-neutral-900 font-sans">
-                        {m.currentSemPubs || 0} <span className="text-[10px] font-normal text-neutral-500">completed</span>
+                      <p className="text-sm font-black text-neutral-900 dark:text-white font-sans">
+                        {m.currentSemPubs || 0} <span className="text-[10px] font-normal text-neutral-500 dark:text-neutral-400">completed</span>
                       </p>
                     </div>
-                    <span className="text-[9px] text-neutral-400 font-mono text-right">
+                    <span className="text-[9px] text-neutral-400 dark:text-neutral-500 font-mono text-right">
                       Resets Jan 2027<br />(Sem 2)
                     </span>
                   </div>
 
                   {/* Schedule Display */}
-                  <div className="space-y-1.5 bg-neutral-50/70 p-2.5 rounded-xl border border-neutral-150">
+                  <div className="space-y-1.5 bg-neutral-50/70 dark:bg-neutral-800/50 p-2.5 rounded-xl border border-neutral-150 dark:border-neutral-700">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold text-neutral-700 flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-[#bc1700]" /> Weekly Availability
+                      <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-300 flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-[#bc1700] dark:text-red-400" /> Weekly Availability
                       </span>
                       {(isLayoutEditor || isSelf) && (
                         <button
                           type="button"
                           onClick={() => handleOpenScheduleModal(m)}
-                          className="text-[10px] font-bold text-[#bc1700] hover:underline cursor-pointer"
+                          className="text-[10px] font-bold text-[#bc1700] dark:text-red-400 hover:underline cursor-pointer"
                         >
                           Update
                         </button>
                       )}
                     </div>
-                    <p className="text-[11px] text-neutral-600 line-clamp-2 leading-relaxed">
+                    <p className="text-[11px] text-neutral-600 dark:text-neutral-300 line-clamp-2 leading-relaxed">
                       {schedText}
                     </p>
                   </div>
 
                   {/* Contact Metadata */}
-                  <div className="space-y-1.5 text-xs text-gray-600 pt-2 border-t border-gray-100">
+                  <div className="space-y-1.5 text-xs text-gray-600 dark:text-neutral-400 pt-2 border-t border-gray-100 dark:border-neutral-800">
                     <div className="flex items-center justify-between group">
                       <p className="flex items-center gap-2 font-mono text-[11px] truncate">
-                        <Mail className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                        <Mail className="w-3.5 h-3.5 text-gray-400 dark:text-neutral-500 shrink-0" />
                         <span className="truncate">{normalizeEmail(m.email)}</span>
                       </p>
                       <button
                         type="button"
                         onClick={() => handleCopy(m.email, `email-${m.email}`, "email")}
-                        className="text-gray-400 hover:text-brand-maroon p-1 rounded transition-colors shrink-0 cursor-pointer"
+                        className="text-gray-400 dark:text-neutral-500 hover:text-brand-maroon dark:hover:text-red-400 p-1 rounded transition-colors shrink-0 cursor-pointer"
                         title="Copy email"
                       >
                         {copiedKey === `email-${m.email}` ? (
-                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                         ) : (
                           <Copy className="w-3.5 h-3.5" />
                         )}
@@ -362,17 +362,17 @@ export default function TeamDirectory({
 
                     <div className="flex items-center justify-between group">
                       <p className="flex items-center gap-2 font-mono text-[11px]">
-                        <Phone className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                        <Phone className="w-3.5 h-3.5 text-gray-400 dark:text-neutral-500 shrink-0" />
                         <span>+63 {m.contact}</span>
                       </p>
                       <button
                         type="button"
                         onClick={() => handleCopy(`+63 ${m.contact}`, `phone-${m.email}`, "contact number")}
-                        className="text-gray-400 hover:text-brand-maroon p-1 rounded transition-colors shrink-0 cursor-pointer"
+                        className="text-gray-400 dark:text-neutral-500 hover:text-brand-maroon dark:hover:text-red-400 p-1 rounded transition-colors shrink-0 cursor-pointer"
                         title="Copy contact number"
                       >
                         {copiedKey === `phone-${m.email}` ? (
-                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                         ) : (
                           <Copy className="w-3.5 h-3.5" />
                         )}
@@ -381,29 +381,29 @@ export default function TeamDirectory({
                   </div>
 
                   {/* Account Security & Password section (Only Layout Editor can view all, others only their own) */}
-                  <div className="pt-2 border-t border-gray-100 bg-neutral-50 -mx-4 -mb-4 sm:-mx-5 sm:-mb-5 p-3 sm:p-4 rounded-b-2xl">
+                  <div className="pt-2 border-t border-gray-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/50 -mx-4 -mb-4 sm:-mx-5 sm:-mb-5 p-3 sm:p-4 rounded-b-2xl">
                     <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1">
-                        <Key className="w-3 h-3 text-brand-maroon" /> Account Password
+                      <span className="text-[10px] font-bold text-gray-500 dark:text-neutral-400 uppercase tracking-wide flex items-center gap-1">
+                        <Key className="w-3 h-3 text-brand-maroon dark:text-red-400" /> Account Password
                       </span>
                       {canViewThisPassword ? (
-                        <span className="text-[9px] font-mono text-emerald-600 uppercase font-bold">Authorized</span>
+                        <span className="text-[9px] font-mono text-emerald-600 dark:text-emerald-400 uppercase font-bold">Authorized</span>
                       ) : (
-                        <span className="text-[9px] font-mono text-neutral-400 uppercase">Editor Only</span>
+                        <span className="text-[9px] font-mono text-neutral-400 dark:text-neutral-500 uppercase">Editor Only</span>
                       )}
                     </div>
 
-                    <div className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-2.5 py-1.5">
+                    <div className="flex items-center justify-between bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-700 rounded-lg px-2.5 py-1.5">
                       {canViewThisPassword ? (
                         <>
-                          <span className="font-mono text-xs font-bold text-neutral-800 tracking-wider">
+                          <span className="font-mono text-xs font-bold text-neutral-800 dark:text-white tracking-wider">
                             {isRevealed ? m.pin : "••••••••"}
                           </span>
                           <div className="flex items-center gap-1.5">
                             <button
                               type="button"
                               onClick={() => togglePasswordReveal(m.email)}
-                              className="text-gray-400 hover:text-gray-700 p-1 rounded cursor-pointer"
+                              className="text-gray-400 dark:text-neutral-500 hover:text-gray-700 dark:hover:text-neutral-300 p-1 rounded cursor-pointer"
                               title={isRevealed ? "Hide password" : "Show password"}
                             >
                               {isRevealed ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
@@ -411,11 +411,11 @@ export default function TeamDirectory({
                             <button
                               type="button"
                               onClick={() => handleCopy(m.pin, `pin-${m.email}`, "password")}
-                              className="text-gray-400 hover:text-brand-maroon p-1 rounded cursor-pointer"
+                              className="text-gray-400 dark:text-neutral-500 hover:text-brand-maroon dark:hover:text-red-400 p-1 rounded cursor-pointer"
                               title="Copy password"
                             >
                               {copiedKey === `pin-${m.email}` ? (
-                                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                               ) : (
                                 <Copy className="w-3.5 h-3.5" />
                               )}
@@ -423,8 +423,8 @@ export default function TeamDirectory({
                           </div>
                         </>
                       ) : (
-                        <div className="flex items-center gap-1.5 text-neutral-400 text-xs py-0.5">
-                          <Lock className="w-3 h-3 text-neutral-400 shrink-0" />
+                        <div className="flex items-center gap-1.5 text-neutral-400 dark:text-neutral-500 text-xs py-0.5">
+                          <Lock className="w-3 h-3 text-neutral-400 dark:text-neutral-500 shrink-0" />
                           <span className="text-[10px] font-mono italic">Protected (Editor Only)</span>
                         </div>
                       )}

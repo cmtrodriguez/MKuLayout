@@ -388,7 +388,7 @@ export default function DashboardOverview({
                 }}
                 className={`px-2.5 sm:px-4 py-1 sm:py-2 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1 sm:gap-2 cursor-pointer flex-1 sm:flex-initial justify-center ${
                   overviewTab === "desk"
-                    ? "bg-gradient-to-r from-[#bc1700] to-[#660000] text-white shadow-md shadow-red-950/20"
+                    ? "bg-[var(--color-brand-gradient)] text-white shadow-md shadow-red-950/20"
                     : "text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200/50 dark:hover:bg-neutral-700"
                 }`}
               >
@@ -406,7 +406,7 @@ export default function DashboardOverview({
                 }}
                 className={`px-2.5 sm:px-4 py-1 sm:py-2 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1 sm:gap-2 cursor-pointer flex-1 sm:flex-initial justify-center ${
                   overviewTab === "calendar"
-                    ? "bg-gradient-to-r from-[#bc1700] to-[#660000] text-white shadow-md shadow-red-950/20"
+                    ? "bg-[var(--color-brand-gradient)] text-white shadow-md shadow-red-950/20"
                     : "text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200/50 dark:hover:bg-neutral-700"
                 }`}
               >
@@ -424,7 +424,7 @@ export default function DashboardOverview({
                 }}
                 className={`px-2.5 sm:px-4 py-1 sm:py-2 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1 sm:gap-2 cursor-pointer flex-1 sm:flex-initial justify-center ${
                   overviewTab === "polls"
-                    ? "bg-gradient-to-r from-[#bc1700] to-[#660000] text-white shadow-md shadow-red-950/20"
+                    ? "bg-[var(--color-brand-gradient)] text-white shadow-md shadow-red-950/20"
                     : "text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200/50 dark:hover:bg-neutral-700"
                 }`}
               >
@@ -669,7 +669,7 @@ export default function DashboardOverview({
                 {isEditorOrDeputy && (
                   <button
                     onClick={onAddTask}
-                    className="w-full py-2 sm:py-2.5 bg-gradient-to-r from-[#bc1700] to-[#660000] hover:shadow-md text-white font-bold rounded-lg sm:rounded-xl text-[11px] sm:text-xs flex items-center justify-center gap-1.5 transition-all shadow-[0_8px_20px_rgba(188,23,0,0.15)] cursor-pointer"
+                    className="w-full py-2 sm:py-2.5 bg-[var(--color-brand-gradient)] hover:shadow-md text-white font-bold rounded-lg sm:rounded-xl text-[11px] sm:text-xs flex items-center justify-center gap-1.5 transition-all shadow-[0_8px_20px_rgba(188,23,0,0.15)] cursor-pointer"
                   >
                     <Plus className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                     <span>Create New Assignment</span>
@@ -748,21 +748,21 @@ export default function DashboardOverview({
                   </div>
                 ) : (
                   announcements.map((ann) => (
-                    <div 
-                      key={ann.id} 
-                      className="p-2.5 sm:p-3 bg-neutral-50/70 dark:bg-neutral-800/70 hover:bg-neutral-50 dark:hover:bg-neutral-800 rounded-xl sm:rounded-2xl border border-neutral-200/30 dark:border-neutral-700 transition-all space-y-1.5 relative group"
+                    <div
+                      key={ann.id}
+                      className="p-2.5 sm:p-3 bg-neutral-50/70 dark:bg-neutral-800/90 hover:bg-neutral-50 dark:hover:bg-neutral-800 rounded-xl sm:rounded-2xl border border-neutral-200/30 dark:border-neutral-700 transition-all space-y-1.5 relative group"
                     >
                       <div className="flex justify-between items-start gap-2">
-                        <h4 className="font-bold text-neutral-950 dark:text-neutral-100 text-xs tracking-tight">
+                        <h4 className="font-bold text-neutral-950 dark:text-white text-xs tracking-tight">
                           {ann.title}
                         </h4>
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[8px] sm:text-[9px] font-mono text-neutral-400 dark:text-neutral-500 font-semibold">{ann.date}</span>
+                          <span className="text-[8px] sm:text-[9px] font-mono text-neutral-400 dark:text-neutral-400 font-semibold">{ann.date}</span>
                           {isEditorOrDeputy && (
                             <button
                               type="button"
                               onClick={() => handleDeleteAnnouncement(ann.id)}
-                              className="text-neutral-400 hover:text-red-600 p-0.5 rounded cursor-pointer opacity-70 group-hover:opacity-100 transition-opacity"
+                              className="text-neutral-400 dark:text-neutral-400 hover:text-red-600 dark:hover:text-red-400 p-0.5 rounded cursor-pointer opacity-70 group-hover:opacity-100 transition-opacity"
                               title="Delete announcement"
                             >
                               <Trash2 className="w-3 h-3" />
@@ -770,7 +770,7 @@ export default function DashboardOverview({
                           )}
                         </div>
                       </div>
-                      <p className="text-[10px] sm:text-[11px] text-neutral-600 dark:text-neutral-300 leading-relaxed">
+                      <p className="text-[10px] sm:text-[11px] text-neutral-600 dark:text-neutral-200 leading-relaxed">
                         {ann.content}
                       </p>
                       <div className="flex items-center justify-between pt-1 border-t border-neutral-200/10 dark:border-neutral-700/50">
@@ -968,7 +968,7 @@ export default function DashboardOverview({
             {/* PERSONAL WORKLOAD & MINI CALENDAR FOR LAYOUT STAFFER & PROBI */}
             {isStaffOrProbi && (
               <div className="lg:col-span-7">
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 sm:gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                   <div className="bg-white dark:bg-neutral-900 rounded-xl sm:rounded-[24px] p-3.5 sm:p-5 border border-neutral-200/60 dark:border-neutral-800 shadow-sm space-y-3.5">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-neutral-100 dark:border-neutral-800 gap-2">
                       <div>

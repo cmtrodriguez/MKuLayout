@@ -114,6 +114,7 @@ export interface Task {
   addedToLayout?: string;
   graphicsIllus?: string;
   onlineHandler?: string;
+  sourceIssueRowId?: string;
 }
 
 export interface CalendarEvent {

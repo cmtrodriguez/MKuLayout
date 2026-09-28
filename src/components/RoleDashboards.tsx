@@ -8,6 +8,7 @@ import {
 import { Task, TeamMember, TaskComment, UserRole } from "../types";
 import { extractHyperlinkDetails } from "../lib/canvaTemplates";
 import { formatCommentDetails, handleBulletKeyDown, RenderFormattedComment } from "../lib/commentUtils";
+import { isUserAssignedToTask } from "../lib/memberUtils";
 
 // ==========================================
 // 1. LAYOUT STAFF DASHBOARD
@@ -51,19 +52,13 @@ export function LayoutStaffDashboard({
     speakText("Comment sent to editor.");
   };
 
-  // Find tasks assigned to this member. Match on name or fallback if empty
-  const myTasks = tasks.filter(t => 
-    !t.isPendingConfirmation && t.illusLayout && (
-      t.illusLayout.toLowerCase().includes(currentUserName.toLowerCase()) ||
-      currentUserName.toLowerCase().includes(t.illusLayout.toLowerCase()) ||
-      t.illusLayout.toLowerCase() === currentUserName.toLowerCase() ||
-      (currentUserName.toLowerCase().includes("sean") && t.illusLayout.toLowerCase().includes("alsim")) ||
-      (currentUserName.toLowerCase().includes("ryan") && t.illusLayout.toLowerCase().includes("abad")) ||
-      (currentUserName.toLowerCase().includes("ryaen") && t.illusLayout.toLowerCase().includes("abad")) ||
-      (currentUserName.toLowerCase().includes("clarisse") && t.illusLayout.toLowerCase().includes("musni")) ||
-      (currentUserName.toLowerCase().includes("carl") && t.illusLayout.toLowerCase().includes("donor"))
-    )
+  const myTasks = tasks.filter(t =>
+    !t.isPendingConfirmation && isUserAssignedToTask(t, currentUserName, currentUserEmail)
   );
+  const issueTasks = myTasks.filter(t =>
+    t.typeOfRelease === "Issue Article" || (!!t.sourceIssueRowId && t.typeOfRelease !== "Online Article" && !/\(Online Pubmat\)$/i.test(t.title))
+  );
+  const onlineTasks = myTasks.filter(t => !issueTasks.some(issue => issue.id === t.id));
 
   return (
     <div className="space-y-3 sm:space-y-6">
@@ -79,7 +74,7 @@ export function LayoutStaffDashboard({
           </div>
           <div className="pt-0.5 sm:pt-2">
             <h4 className="text-xl sm:text-3xl font-display font-black text-gray-900">{myTasks.length}</h4>
-            <p className="text-[9px] sm:text-[11px] text-gray-400">Total assigned layouts</p>
+            <p className="text-[9px] sm:text-[11px] text-gray-400">{issueTasks.length} issue · {onlineTasks.length} online pubmat</p>
           </div>
         </div>
 
@@ -103,7 +98,8 @@ export function LayoutStaffDashboard({
       <div className="space-y-2 sm:space-y-4">
         <div className="flex items-center gap-1.5 border-b pb-1 sm:pb-2 border-gray-100">
           <ClipboardList className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-brand-maroon" />
-          <h3 className="font-display font-bold text-gray-900 text-xs sm:text-sm">Your Layout Assignment Cards</h3>
+          <h3 className="font-display font-bold text-gray-900 text-xs sm:text-sm">My Assignments</h3>
+          <span className="text-[10px] text-gray-400 font-medium">Issue layouts and online pubmats assigned to you</span>
         </div>
 
         {myTasks.length === 0 ? (
@@ -128,10 +124,10 @@ export function LayoutStaffDashboard({
               );
               
               return (
-                <div 
-                  key={task.id} 
+                <div
+                  key={task.id}
                   className={`rounded-xl sm:rounded-2xl p-3 sm:p-6 border transition-all space-y-2.5 sm:space-y-4 hover:shadow-md ${
-                    isRevision ? "border-red-300 bg-red-50/20 shadow-sm" : 
+                    isRevision ? "border-[var(--color-brand-maroon)]/30 bg-[var(--color-brand-maroon-light)]/20 shadow-sm" :
                     isForReview ? "border-purple-200 bg-purple-50/10" :
                     isApproved || isCompleted ? "border-emerald-200 bg-emerald-50/10" :
                     "border-gray-200 bg-white"
@@ -181,14 +177,14 @@ export function LayoutStaffDashboard({
 
                   {/* Highlighted Revision Alert Banner */}
                   {isRevision && (
-                    <div className="p-2.5 sm:p-3.5 bg-gradient-to-r from-red-50 to-amber-50 border border-red-200/90 rounded-lg sm:rounded-xl flex items-start gap-2 sm:gap-3 text-left shadow-2xs">
-                      <AlertCircle className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-red-600 shrink-0 mt-0.5" />
+                    <div className="p-2.5 sm:p-3.5 bg-gradient-to-r from-[var(--color-brand-maroon-light)] to-[var(--color-brand-maroon)] border border-[var(--color-brand-maroon)]/30 rounded-lg sm:rounded-xl flex items-start gap-2 sm:gap-3 text-left shadow-2xs">
+                      <AlertCircle className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-[var(--color-brand-maroon)] shrink-0 mt-0.5" />
                       <div className="space-y-0.5 sm:space-y-1 min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-1.5">
-                          <span className="font-bold text-red-800 text-[10px] sm:text-[11px] uppercase tracking-wider flex items-center gap-1">
+                          <span className="font-bold text-[var(--color-brand-maroon-dark)] text-[10px] sm:text-[11px] uppercase tracking-wider flex items-center gap-1">
                             Revision Requested by Layout Editor / EIC
                           </span>
-                          <span className="text-[9px] sm:text-[10px] font-bold text-red-700 bg-red-100 px-1.5 py-0.5 rounded-full border border-red-200 shrink-0">
+                          <span className="text-[9px] sm:text-[10px] font-bold text-[var(--color-brand-maroon)] bg-[var(--color-brand-maroon-light)] px-1.5 py-0.5 rounded-full border border-[var(--color-brand-maroon)]/30 shrink-0">
                             Action Needed
                           </span>
                         </div>
@@ -219,7 +215,7 @@ export function LayoutStaffDashboard({
                           href={details.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center justify-between p-2.5 sm:p-3 bg-red-50/80 hover:bg-red-100 border border-red-200/80 rounded-lg sm:rounded-xl transition-all group cursor-pointer"
+                          className="flex items-center justify-between p-2.5 sm:p-3 bg-[var(--color-brand-maroon-light)]/80 hover:bg-[var(--color-brand-maroon-light)] border border-[var(--color-brand-maroon)]/30 rounded-lg sm:rounded-xl transition-all group cursor-pointer"
                         >
                           <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
                             <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#bc1700] shrink-0" />
@@ -446,7 +442,7 @@ export function EicDashboard({
   if (!isEditorOrDeputy) {
     return (
       <div className="bg-white rounded-3xl p-8 sm:p-12 border border-neutral-200/80 shadow-sm text-center space-y-4 max-w-md mx-auto my-8 animate-fade-in text-left">
-        <div className="w-14 h-14 bg-red-50 text-[#bc1700] rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+        <div className="w-14 h-14 bg-[var(--color-brand-maroon-light)] text-[var(--color-brand-maroon)] rounded-2xl flex items-center justify-center mx-auto shadow-inner">
           <Lock className="w-7 h-7" />
         </div>
         <div className="space-y-1.5 text-center">

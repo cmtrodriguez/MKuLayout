@@ -12,7 +12,7 @@ import GoogleDocConfirmModal from "./GoogleDocConfirmModal";
 import { shareGoogleDocWithMember } from "../lib/googleDriveShare";
 import { fetchGoogleDocTitle, extractDocInputDetails } from "../lib/googleDocTitle";
 
-import { OFFICIAL_MEMBERS_MAP, getOfficialDisplayName, getPreferredFirstName } from "../lib/memberUtils";
+import { OFFICIAL_MEMBERS_MAP, getOfficialDisplayName, getPreferredFirstName, resolveLayoutAssignee } from "../lib/memberUtils";
 
 interface AssignmentsListProps {
   tasks: Task[];
@@ -138,63 +138,51 @@ export default function AssignmentsList({
 
     const sourceRowId = (activeForm as any).sourceIssueRowId || (task as any).sourceIssueRowId;
     const dispatchProgress = (finalData.illusLayout && finalData.illusLayout !== "Unassigned") ? "Assigned" : "Not Started";
+    const resolvedAssignee = resolveLayoutAssignee(finalData.illusLayout || "", members);
+    const fromIssueSheet = !!sourceRowId || finalData.typeOfRelease === "Issue Article" || task.typeOfRelease === "Issue Article";
 
-    if (sourceRowId) {
-      // Confirming a task that originated from an Issue Publication sheet row must produce BOTH
-      // an Issue Publication task (shown under the sheet container) and an Online Pubmat task,
-      // so the assigned account receives the two companion assignments.
+    if (fromIssueSheet) {
       const baseTitle = finalData.title.replace(/\s*\(Online Pubmat\)$/i, "").trim();
-      const issueTaskId = `issue-task-${sourceRowId}`;
+      const issueTaskId = sourceRowId ? `issue-task-${sourceRowId}` : (task.typeOfRelease === "Issue Article" ? task.id : `${task.id.replace(/-online$/, "")}`);
+      const onlineTaskId = sourceRowId ? `online-task-${sourceRowId}` : `${issueTaskId}-online`;
 
-      const onlineTask = {
+      const sharedFields: Partial<Task> = {
         ...finalData,
-        id: task.id,
         title: baseTitle,
-        typeOfRelease: "Online Article",
-        isPendingConfirmation: false,
-        progress: dispatchProgress,
-        lastUpdated: new Date().toISOString()
-      } as Task;
-
-      const issueTask = {
-        ...finalData,
-        id: issueTaskId,
-        title: baseTitle,
-        typeOfRelease: "Issue Article",
+        illusLayout: resolvedAssignee.name || finalData.illusLayout,
+        assigneeEmail: resolvedAssignee.email || finalData.assigneeEmail || "",
+        assigneeName: resolvedAssignee.name || finalData.assigneeName || finalData.illusLayout,
         isPendingConfirmation: false,
         progress: dispatchProgress,
         lastUpdated: new Date().toISOString(),
-        sourceIssueRowId: sourceRowId
-      } as Task & { sourceIssueRowId?: string };
-
-      updated = updated.filter(t => t.id !== issueTaskId).map(t => t.id === task.id ? onlineTask : t);
-      updated = [issueTask, ...updated];
-    } else if (finalData.typeOfRelease === "Issue Article" || task.typeOfRelease === "Issue Article") {
-      // Whenever assigning/confirming an Issue Layout task,
-      // automatically generate/update the companion Online Pubmat assignment for the same ArtX
-      const baseTitle = finalData.title.replace(/\s*\(Online Pubmat\)$/i, "").trim();
-
-      const existingOnlineIdx = updated.findIndex(
-        t => (t.id === `${task.id}-online` || (t.typeOfRelease === "Online Article" && t.title.replace(/\s*\(Online Pubmat\)$/i, "").trim() === baseTitle))
-      );
-
-      const onlineTitle = `${baseTitle} (Online Pubmat)`;
+        sourceIssueRowId: sourceRowId || finalData.sourceIssueRowId,
+      };
 
       const onlineTask: Task = {
         ...finalData,
-        id: existingOnlineIdx !== -1 ? updated[existingOnlineIdx].id : `${task.id}-online`,
-        title: onlineTitle,
+        ...sharedFields,
+        id: onlineTaskId,
+        title: `${baseTitle} (Online Pubmat)`,
         typeOfRelease: "Online Article",
-        isPendingConfirmation: false,
-        progress: (finalData.illusLayout && finalData.illusLayout !== "Unassigned") ? "Assigned" : "Not Started",
-        lastUpdated: new Date().toISOString()
       };
 
-      if (existingOnlineIdx !== -1) {
-        updated[existingOnlineIdx] = onlineTask;
-      } else {
-        updated = [onlineTask, ...updated];
-      }
+      const issueTask: Task = {
+        ...finalData,
+        ...sharedFields,
+        id: issueTaskId,
+        title: baseTitle,
+        typeOfRelease: "Issue Article",
+      };
+
+      updated = updated.filter(t =>
+        t.id !== task.id &&
+        t.id !== issueTaskId &&
+        t.id !== onlineTaskId &&
+        t.id !== `${task.id}-online` &&
+        t.id !== `issue-pending-${sourceRowId || ""}` &&
+        !(sourceRowId && t.sourceIssueRowId === sourceRowId)
+      );
+      updated = [issueTask, onlineTask, ...updated];
     }
 
     onUpdateTasks(updated);

@@ -19,7 +19,8 @@ import QuickAccessHub from "./components/QuickAccessHub";
 import ProfileSettings from "./components/ProfileSettings";
 import { LayoutStaffDashboard, EicDashboard } from "./components/RoleDashboards";
 import { CanvaDirectory } from "./components/CanvaDirectory";
-import { OFFICIAL_MEMBERS_MAP, getPreferredFirstName } from "./lib/memberUtils";
+import { OFFICIAL_MEMBERS_MAP, getPreferredFirstName, resolveLayoutAssignee } from "./lib/memberUtils";
+import { AccentTheme, applyAccentCssVars } from "./lib/accentTheme";
 import { supabase, fetchUserProfileByEmail, fetchTasks, fetchMembers, fetchComments, fetchCalendarEvents, fetchPolls, fetchAnnouncements, fetchNotifications, fetchIssueSheets, upsertTask, deleteTask, upsertMember, createComment, upsertCalendarEvent, deleteCalendarEvent, createPoll, updatePollOptionVotes, deletePoll, createNotification, markNotificationRead, createAnnouncement, saveIssueSheets, subscribeToLayoutRealtime } from "./lib/supabase";
 import mkuleImg from "./mkule.png";
 
@@ -131,8 +132,8 @@ export default function App() {
 
   // Theme & Appearance State (persisted per-account, defaults to light)
   const [darkMode, setDarkMode] = useState<boolean>(false);
-  const [accentTheme, setAccentTheme] = useState<"maroon" | "navy" | "forest" | "grape">(() => {
-    return (localStorage.getItem("mkule_accent") as any) || "maroon";
+  const [accentTheme, setAccentTheme] = useState<AccentTheme>(() => {
+    return (localStorage.getItem("mkule_accent") as AccentTheme) || "maroon";
   });
 
   // Guards the persist effect so loading a saved theme (or switching accounts)
@@ -161,20 +162,15 @@ export default function App() {
     localStorage.setItem(themeKeyFor(userEmail), darkMode ? "dark" : "light");
   }, [darkMode, userEmail]);
 
-  const applyAccentTheme = (color: "maroon" | "navy" | "forest" | "grape") => {
+  const applyAccentTheme = (color: AccentTheme) => {
     setAccentTheme(color);
     localStorage.setItem("mkule_accent", color);
-    const colors = {
-      maroon: { primary: "#bc1700", light: "#d32f2f", dark: "#8b0000" },
-      navy: { primary: "#1E3A8A", light: "#3B82F6", dark: "#172554" },
-      forest: { primary: "#065F46", light: "#10B981", dark: "#064E3B" },
-      grape: { primary: "#581C87", light: "#8B5CF6", dark: "#3B0764" }
-    };
-    const root = document.documentElement;
-    root.style.setProperty("--color-brand-maroon", colors[color].primary);
-    root.style.setProperty("--color-brand-maroon-light", colors[color].light);
-    root.style.setProperty("--color-brand-maroon-dark", colors[color].dark);
+    applyAccentCssVars(color);
   };
+
+  useEffect(() => {
+    applyAccentCssVars(accentTheme);
+  }, [accentTheme]);
 
   // Modals Visibility
   const [showTaskForm, setShowTaskForm] = useState(false);
@@ -738,14 +734,17 @@ export default function App() {
     persistIssueSheets(nextSheets);
 
     const rowTitle = issueRowDraft.title?.trim() || `${issueRowDraft.section || "Issue"}${issueRowDraft.page ? ` ${issueRowDraft.page}` : ""}`.trim() || `Issue Row ${issueRowDraft.id}`;
-    const assignee = issueRowDraft.online?.trim() || issueRowDraft.layout?.trim() || "Unassigned";
-    const newPendingTask: Task & { sourceIssueRowId?: string } = {
+    const layoutAssignee = issueRowDraft.layout?.trim() || "Unassigned";
+    const resolved = resolveLayoutAssignee(layoutAssignee, members);
+    const newPendingTask: Task = {
       id: `issue-pending-${issueRowDraft.id}`,
       title: rowTitle,
       typeOfRelease: "Online Article",
       typeOfContent: issueRowDraft.section || "News",
       writer: issueRowDraft.writer || "Unspecified Writer",
-      illusLayout: assignee,
+      illusLayout: resolved.name,
+      assigneeEmail: resolved.email,
+      assigneeName: resolved.name,
       graphics: issueRowDraft.graphics || "",
       graphicsIllus: issueRowDraft.graphics || "",
       progress: "Assigned",
@@ -760,13 +759,18 @@ export default function App() {
       pubmatLink: "",
       draftLink: "",
       addedToLayout: "",
-      onlineHandler: assignee,
+      onlineHandler: issueRowDraft.online || resolved.name,
       isPendingConfirmation: true,
       sourceIssueRowId: issueRowDraft.id,
     };
 
     commitTasks((prev) => {
-      const filtered = prev.filter((task: any) => task.sourceIssueRowId !== issueRowDraft.id && task.id !== `issue-pending-${issueRowDraft.id}`);
+      const filtered = prev.filter((task) =>
+        task.id !== `issue-pending-${issueRowDraft.id}` &&
+        task.id !== `issue-task-${issueRowDraft.id}` &&
+        task.id !== `online-task-${issueRowDraft.id}` &&
+        task.sourceIssueRowId !== issueRowDraft.id
+      );
       return [newPendingTask, ...filtered];
     });
 
@@ -844,6 +848,7 @@ export default function App() {
       case "Online Layout Head":
         return [
           { id: "dashboard", label: "Home", icon: LayoutGrid },
+          { id: "my-assignments", label: "My Assignments", icon: Kanban },
           { id: "online-pubmat", label: "Online Pubmat", icon: Kanban },
           { id: "review-submissions", label: "Review Submissions", icon: ShieldCheck },
           { id: "canva-directory", label: "Canva Template Directory", icon: Link2 },
@@ -906,6 +911,7 @@ export default function App() {
       : "";
 
     const selectedArtist = layoutArtistOptions.find((option) => option.value === formArtist);
+    const resolvedAssignee = resolveLayoutAssignee(resolvedFormArtist, members);
     const autoCanvaLink = CANVA_LINK_BY_CATEGORY[formContentType] || "";
     const created: Task = {
       id: `task-${Date.now()}`,
@@ -914,8 +920,8 @@ export default function App() {
       typeOfContent: formContentType,
       writer: formWriter || "Unspecified Writer",
       illusLayout: resolvedFormArtist,
-      assigneeEmail: selectedArtist?.email || "",
-      assigneeName: selectedArtist?.label || resolvedFormArtist,
+      assigneeEmail: selectedArtist?.email || resolvedAssignee.email || "",
+      assigneeName: selectedArtist?.label || resolvedAssignee.name || resolvedFormArtist,
       progress: resolvedFormArtist === "Unassigned" ? "Not Started" : "Assigned",
       writeup: formWriteup || formTitle || "drafting",
       priority: formPriority,
@@ -1052,7 +1058,7 @@ export default function App() {
                   }}
                   className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide flex items-center gap-3 transition-all cursor-pointer text-left ${
                     isActive
-                      ? "bg-gradient-to-r from-[#bc1700] to-[#660000] text-white font-black shadow-lg shadow-red-950/40 border-l-4 border-white"
+                      ? "bg-[var(--color-brand-gradient)] text-white font-black shadow-lg shadow-red-950/40 border-l-4 border-white"
                       : "text-neutral-400 hover:text-white hover:bg-neutral-900/80"
                   }`}
                 >
@@ -1174,7 +1180,7 @@ export default function App() {
                       }}
                       className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-bold tracking-wide flex items-center gap-3 transition-all text-left cursor-pointer ${
                         isActive
-                          ? "bg-gradient-to-r from-[#bc1700] to-[#660000] text-white shadow-sm"
+                          ? "bg-[var(--color-brand-gradient)] text-white shadow-sm"
                           : "text-neutral-300 hover:text-white hover:bg-neutral-900"
                       }`}
                     >

@@ -191,10 +191,44 @@ export function getOfficialFullName(name?: string | null, email?: string | null)
   return `${parts[parts.length - 1]}, ${parts.slice(0, -1).join(" ")}`;
 }
 
+export function resolveLayoutAssignee(
+  name: string,
+  members: Array<{ name?: string; email?: string; displayName?: string }>
+): { name: string; email: string } {
+  const needle = (name || "").trim();
+  if (!needle || needle.toLowerCase() === "unassigned") {
+    return { name: needle || "Unassigned", email: "" };
+  }
+
+  const lower = needle.toLowerCase();
+  const fromRoster = members.find((member) => {
+    const first = getPreferredFirstName(member.name || "", member.email || "").toLowerCase();
+    return (
+      first === lower ||
+      (member.name || "").toLowerCase().includes(lower) ||
+      (member.displayName || "").toLowerCase().includes(lower)
+    );
+  });
+  if (fromRoster?.email) {
+    return { name: getPreferredFirstName(fromRoster.name || needle, fromRoster.email), email: fromRoster.email };
+  }
+
+  const official = Object.values(OFFICIAL_MEMBERS_MAP).find((info) =>
+    info.preferredFirstName.toLowerCase() === lower ||
+    info.officialName.toLowerCase().includes(lower) ||
+    info.displayName.toLowerCase().includes(lower)
+  );
+  if (official) {
+    return { name: official.preferredFirstName, email: official.email };
+  }
+
+  return { name: needle, email: "" };
+}
+
 /**
  * Checks if a task is assigned to a specific staff member
  */
-export function isUserAssignedToTask(task: { illusLayout?: string; graphics?: string; writer?: string; assigneeEmail?: string; assigneeName?: string }, userName: string, userEmail: string): boolean {
+export function isUserAssignedToTask(task: { illusLayout?: string; graphics?: string; writer?: string; assigneeEmail?: string; assigneeName?: string; onlineHandler?: string }, userName: string, userEmail: string): boolean {
   const normalizedUserEmail = userEmail?.trim().toLowerCase();
   const normalizedTaskEmail = task.assigneeEmail?.trim().toLowerCase();
 
@@ -203,7 +237,7 @@ export function isUserAssignedToTask(task: { illusLayout?: string; graphics?: st
   }
 
   const preferred = getPreferredFirstName(userName, userEmail).toLowerCase();
-  const rawTarget = `${task.illusLayout || ""} ${task.assigneeName || ""} ${task.graphics || ""}`.toLowerCase();
+  const rawTarget = `${task.illusLayout || ""} ${task.assigneeName || ""} ${task.graphics || ""} ${task.onlineHandler || ""}`.toLowerCase();
 
   if (rawTarget.includes(preferred)) return true;
 
