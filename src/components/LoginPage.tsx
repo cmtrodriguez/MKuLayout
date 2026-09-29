@@ -158,6 +158,17 @@ export default function LoginPage({ members, onLogin, speechEnabled, darkMode = 
           );
           return;
         }
+
+        // Supabase is authoritative: a failed password check must never fall
+        // through to the offline registry, or any password would be accepted.
+        if (error) {
+          setErrorMsg(
+            error.message === "Invalid login credentials"
+              ? "Incorrect email or password. Please try again."
+              : `Sign-in failed: ${error.message}`
+          );
+          return;
+        }
       } catch (signInError) {
         console.warn("Supabase sign-in failed; falling back to manual account registry:", signInError);
       }
