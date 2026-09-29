@@ -286,6 +286,18 @@ export default function DashboardOverview({
               <ExternalLink className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-600 dark:text-emerald-400 group-hover:translate-x-0.5 transition-transform" />
             </a>
 
+            {/* Issue Template Drive Folder Link */}
+            <a
+              href="https://drive.google.com/drive/folders/1hGmrOahAVnzllljvObUlPSNkPY4THtBn?usp=drive_link"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 py-1 sm:px-3.5 sm:py-2 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 border border-amber-200/80 dark:border-amber-800 rounded-xl sm:rounded-2xl text-amber-900 dark:text-amber-300 text-[10px] sm:text-xs font-bold transition-all shadow-2xs group cursor-pointer"
+            >
+              <Folder className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-700 dark:text-amber-400 group-hover:scale-105 transition-transform" />
+              <span>Issue Template</span>
+              <ExternalLink className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-600 dark:text-amber-400 group-hover:translate-x-0.5 transition-transform" />
+            </a>
+
             {/* Sub-tab Switcher styled with horizontal layout */}
             <div className="flex flex-wrap items-center bg-neutral-100 dark:bg-neutral-800 p-0.5 sm:p-1 rounded-xl sm:rounded-2xl gap-0.5 sm:gap-1 w-full sm:w-auto">
               <button
@@ -1004,6 +1016,7 @@ export default function DashboardOverview({
             members={members}
             speechEnabled={speechEnabled}
             currentUserEmail={currentUserEmail}
+            currentUserRole={currentUserRole}
             onUpdatePolls={onUpdatePolls}
           />
         </div>

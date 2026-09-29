@@ -140,6 +140,7 @@ export default function App() {
   // Guards the persist effect so loading a saved theme (or switching accounts)
   // never writes the previous account's value onto the new account's key.
   const themeSkipPersist = useRef(false);
+  const wasAuthenticatedRef = useRef(false);
   const themeKeyFor = (email: string) => `mkule_theme_${email.toLowerCase()}`;
 
   // Load the signed-in account's own theme preference; light when unset.
@@ -355,6 +356,27 @@ export default function App() {
     tasksRef.current = newTasks;
     setTasks(newTasks);
     persistTaskDiff(prevTasks, newTasks);
+
+    // Deadline-change alert: notify the assignee when a leader edits the due date.
+    // Only real dates count — issue-sheet tasks store a page number in releaseDate.
+    prevTasks.forEach((prev) => {
+      const next = newTasks.find((t) => t.id === prev.id);
+      if (!next) return;
+      const oldDate = (prev.releaseDate || "").trim();
+      const newDate = (next.releaseDate || "").trim();
+      const looksLikeDate = /(JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER)/i.test(newDate) || /^\d{4}-\d{2}-\d{2}$/.test(newDate);
+      if (oldDate && newDate && oldDate !== newDate && looksLikeDate && next.illusLayout && next.illusLayout !== "Unassigned") {
+        const assigneeEmail = resolveMemberEmail(next.illusLayout);
+        if (assigneeEmail && assigneeEmail.toLowerCase() !== userEmail.toLowerCase()) {
+          handleAddNotification(
+            "Deadline Updated",
+            `The deadline for '${next.title}' was moved from ${oldDate} to ${newDate}.`,
+            "deadline",
+            [assigneeEmail]
+          );
+        }
+      }
+    });
   };
 
   // Writes created/edited rows and deletes removed ones so every task with a real
@@ -402,8 +424,30 @@ export default function App() {
   };
 
   const handleUpdatePolls = (newPolls: Poll[]) => {
+    const prevPolls = polls;
     setPolls(newPolls);
-    // Poll voting is handled via updatePollOptionVotes per option
+
+    const prevById = new Map(prevPolls.map(p => [p.id, p]));
+    const seenIds = new Set<string>();
+
+    newPolls.forEach((poll) => {
+      seenIds.add(poll.id);
+      const prev = prevById.get(poll.id);
+      if (!prev) {
+        void createPoll(poll);
+        return;
+      }
+      poll.options.forEach((opt) => {
+        const prevOpt = prev.options.find(o => o.id === opt.id);
+        if (!prevOpt || prevOpt.votes.join("|") !== opt.votes.join("|")) {
+          void updatePollOptionVotes(opt.id, opt.votes);
+        }
+      });
+    });
+
+    prevById.forEach((_, id) => {
+      if (!seenIds.has(id)) void deletePoll(id);
+    });
   };
 
   const handleAddComment = (newComment: TaskComment) => {
@@ -516,7 +560,11 @@ export default function App() {
     setUserName(resolvedName);
     setUserEmail(normalizedEmail);
     setIsAuthenticated(true);
-    setActiveTab("dashboard");
+    // Only land on the dashboard for a fresh sign-in. Background auth events
+    // (token refresh after inactivity) re-run this and would otherwise yank the
+    // user back from whatever tab they were on.
+    if (!wasAuthenticatedRef.current) setActiveTab("dashboard");
+    wasAuthenticatedRef.current = true;
     persistSessionState(normalizedEmail, resolvedRole, resolvedName);
   };
 
@@ -529,6 +577,7 @@ export default function App() {
       await supabase.auth.signOut();
     }
     clearStoredSession();
+    wasAuthenticatedRef.current = false;
     setIsAuthenticated(false);
     setUserRole("Layout Staff Member");
     setUserEmail("");
@@ -1286,7 +1335,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* --- RIGHT COLUMN CONTAINER (Jobie mockup style main hub) --- */}
-      <div className="flex-1 flex flex-col min-w-0 md:h-screen md:overflow-y-auto p-1.5 sm:p-3 md:p-5 space-y-2 sm:space-y-3 md:space-y-4">
+      <div className="flex-1 flex flex-col min-w-0 md:h-screen md:overflow-y-auto p-2.5 sm:p-3 md:p-5 space-y-3 sm:space-y-3 md:space-y-4">
 
         {/* RIGHT TOP CONTROL BAR (Minimalist, Accessible) */}
         <div className="flex flex-col sm:flex-row items-center justify-between bg-white dark:bg-neutral-900 border border-neutral-150 dark:border-neutral-800 rounded-xl sm:rounded-2xl px-3 sm:px-5 py-2 sm:py-3 shadow-sm gap-2 sm:gap-3 shrink-0">
@@ -1775,6 +1824,7 @@ export default function App() {
                 members={members}
                 speechEnabled={speechEnabled}
                 currentUserEmail={userEmail}
+                currentUserRole={userRole}
                 onUpdatePolls={handleUpdatePolls}
               />
             )}
@@ -2120,6 +2170,10 @@ export default function App() {
         currentUserName={userName}
         currentUserRole={userRole}
         onClose={() => setSelectedTask(null)}
+        onDeleteTask={(taskToDelete) => {
+          commitTasks((prev) => prev.filter((t) => t.id !== taskToDelete.id));
+          setSelectedTask(null);
+        }}
         onUpdateTask={(updatedTask) => {
           setSelectedTask(updatedTask);
           let updatedList = tasks.map(t => t.id === updatedTask.id ? updatedTask : t);

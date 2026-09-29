@@ -174,11 +174,7 @@ export default function ProfileSettings({
             </span>
           </div>
 
-          <div className="border-t pt-4 border-gray-100 dark:border-neutral-800 grid grid-cols-2 gap-2 text-xs">
-            <div>
-              <span className="text-gray-400 dark:text-neutral-400 block text-[9px] font-semibold uppercase">Workspace level</span>
-              <span className="font-mono font-bold text-gray-800 dark:text-neutral-200 text-sm">LVL {currentMember.level}</span>
-            </div>
+          <div className="border-t pt-4 border-gray-100 dark:border-neutral-800 grid grid-cols-1 gap-2 text-xs">
             <div>
               <span className="text-gray-400 dark:text-neutral-400 block text-[9px] font-semibold uppercase">Total Tasks</span>
               <span className="font-mono font-bold text-gray-800 dark:text-neutral-200 text-sm">{memberTasks.length}</span>

@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { Task, TeamMember, TaskComment, TaskStatus, TaskPriority } from "../types";
 import { extractHyperlinkDetails } from "../lib/canvaTemplates";
+import { isUserAssignedToTask } from "../lib/memberUtils";
 import { formatCommentDetails, handleBulletKeyDown, RenderFormattedComment } from "../lib/commentUtils";
 import { getPreferredFirstName } from "../lib/memberUtils";
 import { toISOFormatDate, formatISOToDisplayDate } from "./AssignmentsList";
@@ -21,6 +22,7 @@ interface TaskDetailsModalProps {
   currentUserRole?: string;
   onClose: () => void;
   onUpdateTask: (task: Task) => void;
+  onDeleteTask?: (task: Task) => void;
   onAddComment: (comment: TaskComment) => void;
   onTriggerCritiqueTab?: (task: Task) => void;
 }
@@ -35,6 +37,7 @@ export default function TaskDetailsModal({
   currentUserRole,
   onClose,
   onUpdateTask,
+  onDeleteTask,
   onAddComment,
   onTriggerCritiqueTab,
 }: TaskDetailsModalProps) {
@@ -52,6 +55,10 @@ export default function TaskDetailsModal({
   // task is unassigned so it can be handed out in the first place.
   const hasAssignee = Boolean(task.illusLayout) && task.illusLayout !== "Unassigned";
   const canEditCoreFields = isAssignedStaffer || (!hasAssignee && isEditorOrDeputy);
+
+  // Only the assigned artist may submit for review — leaders viewing someone
+  // else's task should not see the submit button.
+  const isThisTaskAssignee = isUserAssignedToTask(task, currentUserName, currentUserEmail);
 
   const speakText = (text: string) => {
     if (!speechEnabled) return;
@@ -157,6 +164,20 @@ export default function TaskDetailsModal({
                 )}
               </div>
 
+              {isEditorOrDeputy && onDeleteTask && (
+                <button
+                  onClick={() => {
+                    if (window.confirm(`Delete task '${task.title}'? This cannot be undone.`)) {
+                      onDeleteTask(task);
+                    }
+                  }}
+                  className="p-1 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900 rounded-full text-rose-500 hover:text-rose-700 transition-all shrink-0 cursor-pointer"
+                  aria-label="Delete task"
+                  title="Delete task"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              )}
               <button
                 onClick={onClose}
                 className="p-1 bg-gray-50 dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded-full text-gray-400 hover:text-gray-800 dark:hover:text-neutral-200 transition-all shrink-0 cursor-pointer"
@@ -337,7 +358,7 @@ export default function TaskDetailsModal({
           <div className="bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl text-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
             <span className="font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wide shrink-0">Workflow Actions Desk</span>
             <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-end">
-              {task.progress !== "For Review" && task.progress !== "Completed" && task.progress !== "Approved" && (
+              {isThisTaskAssignee && task.progress !== "For Review" && task.progress !== "Completed" && task.progress !== "Approved" && (
                 <button
                   onClick={() => {
                     const updated = { ...task, progress: "For Review" as const, lastUpdated: new Date().toISOString() };

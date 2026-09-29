@@ -175,30 +175,30 @@ export function CanvaDirectory({ currentUserRole }: CanvaDirectoryProps = {}) {
   });
 
   return (
-    <div className="bg-white border border-neutral-200/70 rounded-xl sm:rounded-2xl shadow-sm overflow-hidden text-left transition-all">
+    <div className="bg-white dark:bg-neutral-900 border border-neutral-200/70 dark:border-neutral-800 rounded-xl sm:rounded-2xl shadow-sm overflow-hidden text-left transition-all">
       {/* Header bar */}
-      <div 
+      <div
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-3 sm:px-5 py-2.5 sm:py-4 bg-gradient-to-r from-neutral-50 to-neutral-100/50 flex items-center justify-between border-b border-neutral-150 cursor-pointer hover:bg-neutral-100/30 transition-all"
+        className="w-full px-3 sm:px-5 py-2.5 sm:py-4 bg-gradient-to-r from-neutral-50 to-neutral-100/50 dark:from-neutral-800 dark:to-neutral-800/60 flex items-center justify-between border-b border-neutral-150 dark:border-neutral-700 cursor-pointer hover:bg-neutral-100/30 dark:hover:bg-neutral-700/60 transition-all"
       >
         <div className="flex items-center gap-2 sm:gap-2.5">
           <div className="p-1 sm:p-1.5 bg-brand-maroon/10 rounded-lg sm:rounded-xl text-brand-maroon">
             <LayoutGrid className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
           </div>
           <div>
-            <h3 className="font-sans font-black text-xs sm:text-sm text-stone-900 tracking-tight flex items-center gap-1.5">
+            <h3 className="font-sans font-black text-xs sm:text-sm text-stone-900 dark:text-neutral-100 tracking-tight flex items-center gap-1.5">
               Canva Template Directory
-              <span className="text-[9px] sm:text-[10px] font-mono font-bold bg-neutral-200 text-neutral-700 px-1.5 py-0.5 rounded-full">
+              <span className="text-[9px] sm:text-[10px] font-mono font-bold bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-200 px-1.5 py-0.5 rounded-full">
                 {allTemplates.length} Items
               </span>
             </h3>
-            <p className="text-[9px] sm:text-[10px] text-stone-500 font-medium">
+            <p className="text-[9px] sm:text-[10px] text-stone-500 dark:text-neutral-400 font-medium">
               Unified design canvases for writers, layouts, and oversight desks. Click to edit or open.
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {isOpen ? <ChevronUp className="w-4 h-4 text-stone-500" /> : <ChevronDown className="w-4 h-4 text-stone-500" />}
+          {isOpen ? <ChevronUp className="w-4 h-4 text-stone-500 dark:text-neutral-400" /> : <ChevronDown className="w-4 h-4 text-stone-500 dark:text-neutral-400" />}
         </div>
       </div>
 

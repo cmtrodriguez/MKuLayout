@@ -61,11 +61,11 @@ export function LayoutStaffDashboard({
   const onlineTasks = myTasks.filter(t => !issueTasks.some(issue => issue.id === t.id));
 
   return (
-    <div className="space-y-3 sm:space-y-6">
-      
+    <div className="space-y-4 sm:space-y-6">
+
       {/* Overview stats for layout staff */}
-      <div className="grid grid-cols-2 md:grid-cols-2 gap-2 sm:gap-6">
-        <div className="glass-card rounded-xl sm:rounded-2xl p-2.5 sm:p-5 space-y-1 sm:space-y-2 flex flex-col justify-between">
+      <div className="grid grid-cols-2 md:grid-cols-2 gap-3 sm:gap-6">
+        <div className="glass-card rounded-xl sm:rounded-2xl p-3.5 sm:p-5 space-y-2 sm:space-y-2 flex flex-col justify-between">
           <div className="flex items-center gap-1.5 sm:gap-2">
             <div className="p-1 sm:p-2 bg-brand-maroon/10 text-brand-maroon rounded-lg">
               <ClipboardList className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -78,7 +78,7 @@ export function LayoutStaffDashboard({
           </div>
         </div>
 
-        <div className="glass-card rounded-xl sm:rounded-2xl p-2.5 sm:p-5 space-y-1 sm:space-y-2 flex flex-col justify-between">
+        <div className="glass-card rounded-xl sm:rounded-2xl p-3.5 sm:p-5 space-y-2 sm:space-y-2 flex flex-col justify-between">
           <div className="flex items-center gap-1.5 sm:gap-2">
             <div className="p-1 sm:p-2 bg-green-500/10 text-green-600 rounded-lg">
               <CheckSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -95,7 +95,7 @@ export function LayoutStaffDashboard({
       </div>
 
       {/* Main Worklist */}
-      <div className="space-y-2 sm:space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         <div className="flex items-center gap-1.5 border-b pb-1 sm:pb-2 border-gray-100">
           <ClipboardList className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-brand-maroon" />
           <h3 className="font-display font-bold text-gray-900 text-xs sm:text-sm">My Assignments</h3>
@@ -108,7 +108,7 @@ export function LayoutStaffDashboard({
             <p>You can check the general schedule in the table or sync spreadsheets if a new row was added.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-2.5 sm:gap-5">
+          <div className="grid grid-cols-1 gap-3.5 sm:gap-5">
             {myTasks.map(task => {
               const isRevision = task.progress === "Revision Needed";
               const isForReview = task.progress === "For Review";
@@ -126,7 +126,7 @@ export function LayoutStaffDashboard({
               return (
                 <div 
                   key={task.id} 
-                  className={`rounded-xl sm:rounded-2xl p-3 sm:p-6 border transition-all space-y-2.5 sm:space-y-4 hover:shadow-md ${
+                  className={`rounded-xl sm:rounded-2xl p-3.5 sm:p-6 border transition-all space-y-3.5 sm:space-y-4 hover:shadow-md ${
                     isRevision ? "border-red-300 bg-red-50/20 shadow-sm" : 
                     isForReview ? "border-purple-200 bg-purple-50/10" :
                     isApproved || isCompleted ? "border-emerald-200 bg-emerald-50/10" :
@@ -151,7 +151,6 @@ export function LayoutStaffDashboard({
                         onClick={() => {
                           const updated = { ...task, progress: "For Review" as const, lastUpdated: new Date().toISOString() };
                           onUpdateTask(updated);
-                          onAddComment("LAYOUT STAFF: Marked task as accomplished! Submitted draft for editorial critique.", task.id);
                           onAddNotification(
                             "Draft Submitted",
                             `${currentUserName} submitted '${task.title}' for review.`,
@@ -574,10 +573,10 @@ export function EicDashboard({
       </div>
 
       {activeSubTab === "review" ? (
-        <div className="space-y-2.5 sm:space-y-4">
-          
+        <div className="space-y-3 sm:space-y-4">
+
           {/* Submissions requiring check */}
-          <div className="space-y-2.5 sm:space-y-4 text-left">
+          <div className="space-y-3 sm:space-y-4 text-left">
             <div className="flex items-center gap-1.5 border-b pb-1 sm:pb-2 border-gray-100">
               <ClipboardList className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-brand-maroon" />
               <h3 className="font-display font-bold text-gray-950 text-xs sm:text-sm">Design Layouts Requiring Inspection</h3>
@@ -589,13 +588,13 @@ export function EicDashboard({
                 <p className="mt-1">No layout drafts are currently pending editorial review.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-5 items-start">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-5 items-start">
                 {reviewTasks.map(task => {
                   const isSelected = selectedReviewTaskId === task.id;
                   return (
                     <div 
                       key={task.id} 
-                      className={`p-3 sm:p-5 rounded-xl sm:rounded-2xl border transition-all cursor-pointer space-y-2 sm:space-y-4 bg-white ${
+                      className={`p-3.5 sm:p-5 rounded-xl sm:rounded-2xl border transition-all cursor-pointer space-y-3 sm:space-y-4 bg-white ${
                         isSelected ? "border-brand-maroon shadow-md" : "border-gray-100 hover:border-brand-maroon/15"
                       }`}
                       onClick={() => {
@@ -604,7 +603,7 @@ export function EicDashboard({
                       }}
                     >
                       <div className="flex items-start justify-between gap-2 sm:gap-4">
-                        <div>
+                        <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                             <span className="text-[9px] sm:text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-brand-maroon/5 text-brand-maroon">
                               {task.typeOfRelease}
@@ -618,18 +617,18 @@ export function EicDashboard({
                           <h4 className="font-bold text-gray-900 text-xs sm:text-sm mt-1 sm:mt-1.5">{task.title}</h4>
                           <p className="text-[9px] sm:text-[10px] text-gray-400 font-mono">Artist: {task.illusLayout}</p>
                           {task.canvaLink && (
-                            <p className="text-[9px] sm:text-[10px] text-cyan-600 font-medium truncate mt-0.5 sm:mt-1">
-                              Canva: <a href={task.canvaLink} target="_blank" rel="noopener noreferrer" className="underline font-bold hover:text-cyan-800">{task.canvaLink}</a>
+                            <p className="text-[9px] sm:text-[10px] text-cyan-600 font-medium mt-0.5 sm:mt-1 max-w-full">
+                              Canva: <a href={task.canvaLink} target="_blank" rel="noopener noreferrer" className="underline font-bold hover:text-cyan-800 break-all">{task.canvaLink}</a>
                             </p>
                           )}
                           {task.pubmatLink && (
-                            <p className="text-[9px] sm:text-[10px] text-emerald-600 font-medium truncate mt-0.5 sm:mt-1">
-                              Pubmat/Drive: <a href={task.pubmatLink} target="_blank" rel="noopener noreferrer" className="underline font-bold hover:text-emerald-800">{task.pubmatLink}</a>
+                            <p className="text-[9px] sm:text-[10px] text-emerald-600 font-medium mt-0.5 sm:mt-1 max-w-full">
+                              Pubmat/Drive: <a href={task.pubmatLink} target="_blank" rel="noopener noreferrer" className="underline font-bold hover:text-emerald-800 break-all">{task.pubmatLink}</a>
                             </p>
                           )}
                         </div>
 
-                        <div className="text-right">
+                        <div className="text-right shrink-0 pl-1">
                           <span className="text-[9px] sm:text-[10px] text-gray-400 block font-semibold uppercase">Deadline</span>
                           <span className="text-[11px] sm:text-xs font-bold text-gray-800">{task.releaseDate}</span>
                         </div>

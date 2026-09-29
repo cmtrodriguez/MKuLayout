@@ -600,18 +600,18 @@ export default function TeamDirectory({
       {/* SCHEDULE ENTER / SCAN MODAL */}
       {selectedMemberForSchedule && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-neutral-200 max-w-lg w-full p-5 space-y-4 text-left animate-fade-in max-h-[90vh] overflow-y-auto">
-            
-            <div className="flex items-center justify-between border-b pb-3 border-neutral-200">
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-800 max-w-lg w-full p-5 space-y-4 text-left animate-fade-in max-h-[90vh] overflow-y-auto">
+
+            <div className="flex items-center justify-between border-b pb-3 border-neutral-200 dark:border-neutral-800">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-brand-maroon/10 text-brand-maroon flex items-center justify-center">
+                <div className="w-9 h-9 rounded-xl bg-brand-maroon/10 text-brand-maroon dark:text-brand-maroon-light flex items-center justify-center">
                   <Calendar className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-display font-black text-sm text-neutral-900">
+                  <h3 className="font-display font-black text-sm text-neutral-900 dark:text-neutral-100">
                     Schedule Availability
                   </h3>
-                  <p className="text-[11px] text-neutral-500">
+                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
                     {selectedMemberForSchedule.displayName || selectedMemberForSchedule.name}
                   </p>
                 </div>
@@ -642,7 +642,7 @@ export default function TeamDirectory({
                       className={`py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                         isOff
                           ? "bg-brand-maroon text-white border-brand-maroon shadow-xs"
-                          : "bg-white text-neutral-700 border-neutral-300 hover:border-brand-maroon/60 hover:text-brand-maroon"
+                          : "bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 border-neutral-300 dark:border-neutral-600 hover:border-brand-maroon/60 hover:text-brand-maroon dark:hover:text-brand-maroon-light"
                       }`}
                     >
                       {day}

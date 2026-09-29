@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { 
   Vote, Plus, Users, Clock, EyeOff, ShieldCheck, 
-  CheckCircle, MessageCircle, BarChart, Sparkles, HelpCircle 
+  CheckCircle, MessageCircle, BarChart, Sparkles, HelpCircle, Trash2 
 } from "lucide-react";
 import { Poll, TeamMember } from "../types";
 
@@ -10,6 +10,7 @@ interface MeetingPollsProps {
   members: TeamMember[];
   speechEnabled: boolean;
   currentUserEmail: string;
+  currentUserRole?: string;
   onUpdatePolls: (polls: Poll[]) => void;
 }
 
@@ -18,8 +19,10 @@ export default function MeetingPolls({
   members,
   speechEnabled,
   currentUserEmail,
+  currentUserRole,
   onUpdatePolls,
 }: MeetingPollsProps) {
+  const isLeader = currentUserRole === "Layout Editor" || currentUserRole === "Layout Deputy";
   const [showCreate, setShowCreate] = useState(false);
   const [newQuestion, setNewQuestion] = useState("");
   const [newCategory, setNewCategory] = useState<Poll["category"]>("design");
@@ -89,10 +92,10 @@ export default function MeetingPolls({
     }
 
     const newPoll: Poll = {
-      id: `p-${Date.now()}`,
+      id: crypto.randomUUID(),
       question: newQuestion,
-      options: filteredOptions.map((text, idx) => ({
-        id: `o-${idx}-${Date.now()}`,
+      options: filteredOptions.map((text) => ({
+        id: crypto.randomUUID(),
         text,
         votes: []
       })),
@@ -126,6 +129,7 @@ export default function MeetingPolls({
             </p>
           </div>
 
+          {isLeader && (
           <button
             onClick={() => {
               setShowCreate(!showCreate);
@@ -135,6 +139,7 @@ export default function MeetingPolls({
           >
             <Plus className="w-4 h-4" /> Propose Poll
           </button>
+          )}
         </div>
 
         <div className="space-y-6">
@@ -174,6 +179,22 @@ export default function MeetingPolls({
                   <span className="text-[10px] font-mono text-gray-400 flex items-center gap-1">
                     <Clock className="w-3.5 h-3.5" /> Closes in 5 Days
                   </span>
+
+                  {isLeader && (
+                    <button
+                      onClick={() => {
+                        if (window.confirm("Delete this poll? This cannot be undone.")) {
+                          onUpdatePolls(polls.filter((p) => p.id !== poll.id));
+                          speakText("Poll removed.");
+                        }
+                      }}
+                      className="p-1 rounded hover:bg-red-50 text-gray-300 hover:text-red-600 transition-all shrink-0 cursor-pointer"
+                      aria-label={`Delete poll: ${poll.question}`}
+                      title="Delete poll"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
 
                 {/* Question */}
