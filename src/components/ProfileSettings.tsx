@@ -180,8 +180,8 @@ export default function ProfileSettings({
               <span className="font-mono font-bold text-gray-800 dark:text-neutral-200 text-sm">LVL {currentMember.level}</span>
             </div>
             <div>
-              <span className="text-gray-400 dark:text-neutral-400 block text-[9px] font-semibold uppercase">Total XP</span>
-              <span className="font-mono font-bold text-gray-800 dark:text-neutral-200 text-sm">{currentMember.xp} XP</span>
+              <span className="text-gray-400 dark:text-neutral-400 block text-[9px] font-semibold uppercase">Total Tasks</span>
+              <span className="font-mono font-bold text-gray-800 dark:text-neutral-200 text-sm">{memberTasks.length}</span>
             </div>
           </div>
 
@@ -353,25 +353,6 @@ export default function ProfileSettings({
               </div>
             )}
           </div>
-        </div>
-
-        {/* Workspace Google Drive Integration Card */}
-        <div className="glass-card rounded-2xl p-4 sm:p-5 space-y-2.5 bg-white dark:bg-neutral-900 border border-gray-100 dark:border-neutral-800 shadow-sm">
-          <div className="flex items-center gap-2 text-brand-maroon dark:text-brand-maroon-light">
-            <FolderOpen className="w-4 h-4" />
-            <h4 className="font-bold text-xs text-gray-900 dark:text-neutral-100">MKule '26-'27 Layout Drive</h4>
-          </div>
-          <p className="text-[11px] text-gray-500 dark:text-neutral-400 leading-normal">
-            Connected to official MKule Google Drive workspace repository for layout assets and issue templates.
-          </p>
-          <a
-            href="https://drive.google.com/drive/folders/1IKOK2njjP5SO15gjxIWB-wcZfZgUW76e?usp=drive_link"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full py-2 px-3 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-100 font-semibold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all"
-          >
-            <ExternalLink className="w-3.5 h-3.5" /> Open MKule '26-'27 Layout Drive
-          </a>
         </div>
       </div>
 
@@ -549,42 +530,62 @@ export default function ProfileSettings({
           </div>
 
         </div>
-      </div>
-      </div>
-
-      {/* Task Archive: accomplished layouts, scrollable history */}
-      <div className="glass-card rounded-2xl p-4 sm:p-5 bg-white dark:bg-neutral-900 border border-gray-100 dark:border-neutral-800 shadow-sm space-y-3">
-        <div className="flex items-center justify-between border-b border-gray-100 dark:border-neutral-800 pb-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 items-start">
+        {/* Workspace Google Drive Integration Card */}
+        <div className="glass-card rounded-2xl p-4 sm:p-5 space-y-2.5 bg-white dark:bg-neutral-900 border border-gray-100 dark:border-neutral-800 shadow-sm">
           <div className="flex items-center gap-2 text-brand-maroon dark:text-brand-maroon-light">
             <FolderOpen className="w-4 h-4" />
-            <h4 className="font-bold text-xs text-gray-900 dark:text-neutral-100">Task Archive</h4>
+            <h4 className="font-bold text-xs text-gray-900 dark:text-neutral-100">MKule '26-'27 Layout Drive</h4>
           </div>
-          <span className="text-[10px] font-mono font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 px-2 py-0.5 rounded-full">
-            {archivedTasks.length} accomplished
-          </span>
+          <p className="text-[11px] text-gray-500 dark:text-neutral-400 leading-normal">
+            Connected to official MKule Google Drive workspace repository for layout assets and issue templates.
+          </p>
+          <a
+            href="https://drive.google.com/drive/folders/1IKOK2njjP5SO15gjxIWB-wcZfZgUW76e?usp=drive_link"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full py-2 px-3 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-100 font-semibold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all"
+          >
+            <ExternalLink className="w-3.5 h-3.5" /> Open MKule '26-'27 Layout Drive
+          </a>
         </div>
 
-        {archivedTasks.length === 0 ? (
-          <p className="text-[11px] text-gray-400 dark:text-neutral-500 py-3 text-center">
-            No accomplished tasks yet. Layouts approved by the Layout Editor will be archived here.
-          </p>
-        ) : (
-          <div className="max-h-56 overflow-y-auto pr-1 space-y-1.5">
-            {archivedTasks.map((task: any) => (
-              <div key={task.id} className="flex items-center justify-between gap-2 p-2 bg-neutral-50 dark:bg-neutral-800/60 border border-gray-100 dark:border-neutral-700 rounded-lg text-[11px]">
-                <div className="min-w-0">
-                  <p className="font-bold text-gray-800 dark:text-neutral-200 truncate">{task.title}</p>
-                  <p className="text-[10px] text-gray-400 dark:text-neutral-500 truncate">
-                    {task.typeOfRelease} • {task.typeOfContent} • Target: {task.releaseDate || "—"}
-                  </p>
-                </div>
-                <span className="shrink-0 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[9px] font-bold uppercase">
-                  {task.progress}
-                </span>
-              </div>
-            ))}
+        {/* Task Archive: accomplished layouts, scrollable history */}
+        <div className="glass-card rounded-2xl p-4 sm:p-5 bg-white dark:bg-neutral-900 border border-gray-100 dark:border-neutral-800 shadow-sm space-y-3">
+          <div className="flex items-center justify-between border-b border-gray-100 dark:border-neutral-800 pb-2">
+            <div className="flex items-center gap-2 text-brand-maroon dark:text-brand-maroon-light">
+              <FolderOpen className="w-4 h-4" />
+              <h4 className="font-bold text-xs text-gray-900 dark:text-neutral-100">Task Archive</h4>
+            </div>
+            <span className="text-[10px] font-mono font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 px-2 py-0.5 rounded-full">
+              {archivedTasks.length} accomplished
+            </span>
           </div>
-        )}
+
+          {archivedTasks.length === 0 ? (
+            <p className="text-[11px] text-gray-400 dark:text-neutral-500 py-3 text-center">
+              No accomplished tasks yet. Layouts approved by the Layout Editor will be archived here.
+            </p>
+          ) : (
+            <div className="max-h-56 overflow-y-auto pr-1 space-y-1.5">
+              {archivedTasks.map((task: any) => (
+                <div key={task.id} className="flex items-center justify-between gap-2 p-2 bg-neutral-50 dark:bg-neutral-800/60 border border-gray-100 dark:border-neutral-700 rounded-lg text-[11px]">
+                  <div className="min-w-0">
+                    <p className="font-bold text-gray-800 dark:text-neutral-200 truncate">{task.title}</p>
+                    <p className="text-[10px] text-gray-400 dark:text-neutral-500 truncate">
+                      {task.typeOfRelease} • {task.typeOfContent} • Target: {task.releaseDate || "—"}
+                    </p>
+                  </div>
+                  <span className="shrink-0 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[9px] font-bold uppercase">
+                    {task.progress}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        </div>
+      </div>
       </div>
     </div>
   );

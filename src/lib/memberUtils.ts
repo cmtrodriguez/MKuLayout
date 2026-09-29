@@ -14,7 +14,7 @@ export const OFFICIAL_MEMBERS_MAP: Record<string, MemberOfficialInfo> = {
   "ctrodriguez2@up.edu.ph": {
     email: "ctrodriguez2@up.edu.ph",
     officialName: "Rodriguez, Christian Matthew T.",
-    displayName: "RODRIGUEZ - Xtian Rodriguez",
+    displayName: "Xtian Rodriguez",
     preferredFirstName: "Xtian",
     role: "Layout Editor",
     college: "CAS",
@@ -23,7 +23,7 @@ export const OFFICIAL_MEMBERS_MAP: Record<string, MemberOfficialInfo> = {
   "rcabad1@up.edu.ph": {
     email: "rcabad1@up.edu.ph",
     officialName: "Abad, Ryaen Vincent C.",
-    displayName: "ABAD - Ronz Abad",
+    displayName: "Ronz Abad",
     preferredFirstName: "Ronz",
     role: "Layout Deputy",
     college: "CAMP",
@@ -32,7 +32,7 @@ export const OFFICIAL_MEMBERS_MAP: Record<string, MemberOfficialInfo> = {
   "lfroldan@up.edu.ph": {
     email: "lfroldan@up.edu.ph",
     officialName: "Roldan, Lady Jamaica F.",
-    displayName: "ROLDAN - Jam Roldan",
+    displayName: "Jam Roldan",
     preferredFirstName: "Jam",
     role: "Layout Staffer",
     college: "CAMP",
@@ -41,7 +41,7 @@ export const OFFICIAL_MEMBERS_MAP: Record<string, MemberOfficialInfo> = {
   "cndonor@up.edu.ph": {
     email: "cndonor@up.edu.ph",
     officialName: "Donor, Carl Dexter N.",
-    displayName: "DONOR - Carl Donor",
+    displayName: "Carl Donor",
     preferredFirstName: "Carl",
     role: "Layout Staffer",
     college: "CP",
@@ -50,7 +50,7 @@ export const OFFICIAL_MEMBERS_MAP: Record<string, MemberOfficialInfo> = {
   "jaumali2@up.edu.ph": {
     email: "jaumali2@up.edu.ph",
     officialName: "Umali, Jherica A.",
-    displayName: "UMALI - Jhe Umali",
+    displayName: "Jhe Umali",
     preferredFirstName: "Jhe",
     role: "Layout Probi",
     college: "CPH",
@@ -59,7 +59,7 @@ export const OFFICIAL_MEMBERS_MAP: Record<string, MemberOfficialInfo> = {
   "ctmusni@up.edu.ph": {
     email: "ctmusni@up.edu.ph",
     officialName: "Musni, Clarisse Joy T.",
-    displayName: "MUSNI - Aris Musni",
+    displayName: "Aris Musni",
     preferredFirstName: "Aris",
     role: "Layout Probi",
     college: "CP",
@@ -68,7 +68,7 @@ export const OFFICIAL_MEMBERS_MAP: Record<string, MemberOfficialInfo> = {
   "casorio@up.edu.ph": {
     email: "casorio@up.edu.ph",
     officialName: "Sorio, Clarissa Joyce A.",
-    displayName: "SORIO - Issa Sorio",
+    displayName: "Issa Sorio",
     preferredFirstName: "Issa",
     role: "Layout Probi",
     college: "CP",
@@ -77,7 +77,7 @@ export const OFFICIAL_MEMBERS_MAP: Record<string, MemberOfficialInfo> = {
   "ztatienza@up.edu.ph": {
     email: "ztatienza@up.edu.ph",
     officialName: "Atienza, Zoe Marceux T.",
-    displayName: "ATIENZA - Zoe Atienza",
+    displayName: "Zoe Atienza",
     preferredFirstName: "Zoe",
     role: "Layout Probi",
     college: "CAS",
@@ -86,7 +86,7 @@ export const OFFICIAL_MEMBERS_MAP: Record<string, MemberOfficialInfo> = {
   "jcmagno1@up.edu.ph": {
     email: "jcmagno1@up.edu.ph",
     officialName: "Magno, Joanna Eve C.",
-    displayName: "MAGNO - Eve Magno",
+    displayName: "Eve Magno",
     preferredFirstName: "Eve",
     role: "Layout Probi",
     college: "CAS",
@@ -95,7 +95,7 @@ export const OFFICIAL_MEMBERS_MAP: Record<string, MemberOfficialInfo> = {
   "ibdizon@up.edu.ph": {
     email: "ibdizon@up.edu.ph",
     officialName: "Dizon, Iris B.",
-    displayName: "DIZON - Iris Dizon",
+    displayName: "Iris Dizon",
     preferredFirstName: "Iris",
     role: "Layout Probi",
     college: "CAMP",
@@ -143,7 +143,7 @@ export function getPreferredFirstName(name?: string | null, email?: string | nul
 }
 
 /**
- * Get official display name (e.g. "ABAD - Ronz Abad")
+ * Get official display name (e.g. "Ronz Abad")
  */
 export function getOfficialDisplayName(email?: string, name?: string): string {
   if (email) {
@@ -177,7 +177,7 @@ export function getOfficialFullName(name?: string | null, email?: string | null)
     if (
       lower.includes(val.preferredFirstName.toLowerCase()) ||
       lower.includes(val.officialName.toLowerCase().split(",")[0]) ||
-      lower.includes(val.displayName.toLowerCase().split(" - ")[1]?.trim().toLowerCase() || "")
+      lower.includes(val.displayName.toLowerCase())
     ) {
       return val.officialName;
     }

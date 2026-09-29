@@ -152,23 +152,21 @@ export default function DashboardOverview({
 
   // Staffer workload dataset: total online pubs vs issues per staffer, per month or per semester
   const staffMembersList = members.length > 0 ? members : [
-    { id: "1", name: "Rodriguez, Christian Matthew T.", displayName: "RODRIGUEZ - Xtian Rodriguez" },
-    { id: "2", name: "Abad, Ryaen Vincent C.", displayName: "ABAD - Ronz Abad" },
-    { id: "3", name: "Roldan, Lady Jamaica F.", displayName: "ROLDAN - Jam Roldan" },
-    { id: "4", name: "Donor, Carl Dexter N.", displayName: "DONOR - Carl Donor" },
-    { id: "5", name: "Umali, Jherica A.", displayName: "UMALI - Jhe Umali" },
-    { id: "6", name: "Musni, Clarisse Joy T.", displayName: "MUSNI - Aris Musni" },
-    { id: "7", name: "Sorio, Clarissa Joyce A.", displayName: "SORIO - Issa Sorio" },
-    { id: "8", name: "Atienza, Zoe Marceux T.", displayName: "ATIENZA - Zoe Atienza" },
-    { id: "9", name: "Magno, Joanna Eve C.", displayName: "MAGNO - Eve Magno" },
-    { id: "10", name: "Dizon, Iris B.", displayName: "DIZON - Iris Dizon" },
+    { id: "1", name: "Rodriguez, Christian Matthew T.", displayName: "Xtian Rodriguez" },
+    { id: "2", name: "Abad, Ryaen Vincent C.", displayName: "Ronz Abad" },
+    { id: "3", name: "Roldan, Lady Jamaica F.", displayName: "Jam Roldan" },
+    { id: "4", name: "Donor, Carl Dexter N.", displayName: "Carl Donor" },
+    { id: "5", name: "Umali, Jherica A.", displayName: "Jhe Umali" },
+    { id: "6", name: "Musni, Clarisse Joy T.", displayName: "Aris Musni" },
+    { id: "7", name: "Sorio, Clarissa Joyce A.", displayName: "Issa Sorio" },
+    { id: "8", name: "Atienza, Zoe Marceux T.", displayName: "Zoe Atienza" },
+    { id: "9", name: "Magno, Joanna Eve C.", displayName: "Eve Magno" },
+    { id: "10", name: "Dizon, Iris B.", displayName: "Iris Dizon" },
   ];
 
   const getStaffShortName = (m: any) => {
     if (m.displayName) {
-      const parts = m.displayName.split("-");
-      if (parts[1]) return parts[1].trim().split(" ")[0];
-      return parts[0].trim();
+      return m.displayName.trim().split(" ")[0];
     }
     if (m.name.includes(",")) {
       const parts = m.name.split(",");

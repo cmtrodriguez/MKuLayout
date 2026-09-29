@@ -73,6 +73,7 @@ export default function AssignmentsList({
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Task> | null>(null);
   const [isFetchingDocTitle, setIsFetchingDocTitle] = useState(false);
+  const [confirmRejectId, setConfirmRejectId] = useState<string | null>(null);
 
   const canvaTemplates = getAllCanvaTemplates();
 
@@ -214,6 +215,7 @@ export default function AssignmentsList({
       setEditingTaskId(null);
       setEditForm(null);
     }
+    setConfirmRejectId(null);
     
     speakText("Imported sheet assignment removed.");
   };
@@ -825,12 +827,30 @@ export default function AssignmentsList({
                           <Edit2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Edit
                         </button>
                         {isAdmin && (
-                          <button
-                            onClick={() => handleRejectTask(task.id)}
-                            className="flex-1 md:flex-initial px-2 sm:px-3 py-1.5 sm:py-2 border border-red-200 dark:border-red-800/80 hover:bg-red-50 dark:hover:bg-red-950/40 text-red-600 dark:text-red-400 font-bold rounded-lg sm:rounded-xl flex items-center justify-center gap-1 cursor-pointer transition-all text-[11px] sm:text-xs"
-                          >
-                            <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Reject
-                          </button>
+                          confirmRejectId === task.id ? (
+                            <div className="flex-1 md:flex-initial flex items-center justify-center gap-1">
+                              <span className="text-[10px] sm:text-[11px] font-bold text-red-600 dark:text-red-400 whitespace-nowrap">Are you sure?</span>
+                              <button
+                                onClick={() => handleRejectTask(task.id)}
+                                className="px-2 py-1 sm:py-1.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg text-[11px] sm:text-xs cursor-pointer transition-all"
+                              >
+                                Yes
+                              </button>
+                              <button
+                                onClick={() => setConfirmRejectId(null)}
+                                className="px-2 py-1 sm:py-1.5 bg-neutral-200 dark:bg-neutral-700 hover:bg-neutral-300 dark:hover:bg-neutral-600 text-neutral-700 dark:text-neutral-200 font-bold rounded-lg text-[11px] sm:text-xs cursor-pointer transition-all"
+                              >
+                                No
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setConfirmRejectId(task.id)}
+                              className="flex-1 md:flex-initial px-2 sm:px-3 py-1.5 sm:py-2 border border-red-200 dark:border-red-800/80 hover:bg-red-50 dark:hover:bg-red-950/40 text-red-600 dark:text-red-400 font-bold rounded-lg sm:rounded-xl flex items-center justify-center gap-1 cursor-pointer transition-all text-[11px] sm:text-xs"
+                            >
+                              <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Reject
+                            </button>
+                          )
                         )}
                         <button
                           onClick={() => handleConfirmAndDispatch(task)}

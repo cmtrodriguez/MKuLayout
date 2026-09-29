@@ -54,7 +54,6 @@ export default function App() {
   const [comments, setComments] = useState<TaskComment[]>([]);
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [userProfileId, setUserProfileId] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
   // User Authentication & Role States
@@ -174,20 +173,6 @@ export default function App() {
     applyAccentCssVars(accentTheme);
   }, [accentTheme]);
 
-  // Profile id of the signed-in account; used to filter the alert feed to this
-  // account's own targeted notifications.
-  useEffect(() => {
-    if (!userEmail) {
-      setUserProfileId("");
-      return;
-    }
-    let active = true;
-    fetchUserProfileByEmail(userEmail).then((profile) => {
-      if (active) setUserProfileId(profile?.id || "");
-    });
-    return () => { active = false; };
-  }, [userEmail]);
-
   // Tasks persisted from issue-sheet rows carry deterministic ids; re-attach the
   // source row id after a fetch so sheet edits can still find and replace them.
   const tagTasksWithSourceRows = (list: Task[], sheets: typeof issueSheets): Task[] => {
@@ -211,6 +196,7 @@ export default function App() {
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const [editingIssueRowId, setEditingIssueRowId] = useState<string | null>(null);
   const [issueRowDraft, setIssueRowDraft] = useState<any | null>(null);
+  const [confirmDeleteRowId, setConfirmDeleteRowId] = useState<string | null>(null);
 
   // Form Inputs
   const [formTitle, setFormTitle] = useState("");
@@ -495,6 +481,11 @@ export default function App() {
     return (registryRole ?? (profileRole as UserRole | undefined) ?? storedRole ?? fallbackRole) as UserRole;
   };
 
+  // The official registry name wins so restored sessions drop stale name formats
+  // (e.g. the old "LAST - First" prefix) without needing a fresh login.
+  const resolveDisplayName = (email: string, storedName?: string) =>
+    OFFICIAL_MEMBERS_MAP[normalizeEmail(email || "").toLowerCase()]?.displayName || storedName || "";
+
   const applyAuthenticatedUser = async (email: string, fallbackRole: UserRole, fallbackName: string) => {
     const normalizedEmail = normalizeEmail(email);
     const profile = await fetchUserProfileByEmail(normalizedEmail);
@@ -509,7 +500,17 @@ export default function App() {
         : undefined;
 
     const resolvedRole = resolveRoleForEmail(normalizedEmail, profile?.role, storedRole, fallbackRole);
-    const resolvedName = profile?.full_name || fallbackName || normalizedEmail;
+    // The official registry name matches what the login screen shows, so a refresh or
+    // token-refresh in a background tab can never swap the display name for the email.
+    const storedName =
+      stored && normalizeEmail(stored.email ?? "").toLowerCase() === normalizedEmail.toLowerCase()
+        ? stored.name
+        : undefined;
+    const resolvedName =
+      resolveDisplayName(normalizedEmail, storedName) ||
+      profile?.full_name ||
+      fallbackName ||
+      normalizedEmail;
 
     setUserRole(resolvedRole);
     setUserName(resolvedName);
@@ -588,7 +589,7 @@ export default function App() {
       const storedSession = restoreStoredSession();
       if (storedSession) {
         setUserRole(resolveRoleForEmail(storedSession.email ?? "", null, storedSession.role as UserRole));
-        setUserName(storedSession.name ?? "");
+        setUserName(resolveDisplayName(storedSession.email ?? "", storedSession.name));
         setUserEmail(storedSession.email ?? "");
         setIsAuthenticated(true);
         setActiveTab("dashboard");
@@ -606,7 +607,7 @@ export default function App() {
 
       if (storedSession) {
         setUserRole(resolveRoleForEmail(storedSession.email ?? "", null, storedSession.role as UserRole));
-        setUserName(storedSession.name ?? "");
+        setUserName(resolveDisplayName(storedSession.email ?? "", storedSession.name));
         setUserEmail(storedSession.email ?? "");
         setIsAuthenticated(true);
         setActiveTab("dashboard");
@@ -710,19 +711,19 @@ export default function App() {
         type,
         timestamp,
         readBy: [],
-        targetEmail: email
+        targetEmails: [email]
       };
       if (email.toLowerCase() === userEmail.toLowerCase()) {
-        setNotifications(prev => [{ ...notif, userId: userProfileId || undefined }, ...prev]);
+        setNotifications(prev => [notif, ...prev]);
       }
       createNotification(notif).catch(() => {});
     });
   };
 
   // The bell feed only ever shows alerts addressed to the signed-in account.
-  const myNotifications = userProfileId
-    ? notifications.filter(n => n.userId === userProfileId)
-    : [];
+  const myNotifications = notifications.filter(n =>
+    (n.targetEmails || []).some(email => email.toLowerCase() === userEmail.toLowerCase())
+  );
 
   const updateIssueRow = (id: string, field: "page" | "section" | "title" | "writer" | "graphics" | "layout" | "online" | "progress", value: string) => {
     updateIssueSheets((prev) => prev.map((sheet) => {
@@ -1346,7 +1347,7 @@ export default function App() {
                   <div className="flex items-center justify-between border-b pb-1.5 border-neutral-100 dark:border-neutral-800">
                     <h3 className="font-bold text-neutral-900 dark:text-neutral-100 font-display">Alert Feed</h3>
                     <button
-                      onClick={() => setNotifications(prev => prev.filter(n => !(userProfileId && n.userId === userProfileId)))}
+                      onClick={() => setNotifications(prev => prev.filter(n => !(n.targetEmails || []).some(email => email.toLowerCase() === userEmail.toLowerCase())))}
                       className="text-[10px] text-red-700 dark:text-red-400 hover:underline font-bold cursor-pointer"
                     >
                       Clear
@@ -1587,14 +1588,36 @@ export default function App() {
                             <span className="px-1.5 py-1 rounded-md bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-[10px] font-semibold text-neutral-700 dark:text-neutral-200">
                               {row.progress || "Pending"}
                             </span>
-                            <button
-                              type="button"
-                              onClick={() => deleteIssueRow(row.id)}
-                              className="text-neutral-400 hover:text-red-600 text-xs cursor-pointer ml-1"
-                              title="Remove row"
-                            >
-                              ✕
-                            </button>
+                            {confirmDeleteRowId === row.id ? (
+                              <span className="flex items-center gap-1 ml-1">
+                                <span className="text-[9px] font-bold text-red-600 dark:text-red-400 whitespace-nowrap">Are you sure?</span>
+                                <button
+                                  type="button"
+                                  onClick={() => { deleteIssueRow(row.id); setConfirmDeleteRowId(null); }}
+                                  className="px-1.5 py-0.5 rounded-md bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold cursor-pointer"
+                                  title="Confirm remove row"
+                                >
+                                  Yes
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setConfirmDeleteRowId(null)}
+                                  className="px-1.5 py-0.5 rounded-md bg-neutral-200 dark:bg-neutral-700 hover:bg-neutral-300 dark:hover:bg-neutral-600 text-neutral-700 dark:text-neutral-200 text-[10px] font-bold cursor-pointer"
+                                  title="Cancel"
+                                >
+                                  No
+                                </button>
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setConfirmDeleteRowId(row.id)}
+                                className="text-neutral-400 hover:text-red-600 text-xs cursor-pointer ml-1"
+                                title="Remove row"
+                              >
+                                ✕
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))

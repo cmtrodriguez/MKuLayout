@@ -28,7 +28,7 @@ export const OFFICIAL_ACCOUNTS: OfficialAccount[] = [
   {
     role: "Layout Editor" as UserRole,
     name: "Xtian Rodriguez",
-    displayName: "RODRIGUEZ - Xtian Rodriguez",
+    displayName: "Xtian Rodriguez",
     college: "CAS",
     email: "ctrodriguez2@up.edu.ph",
     contact: "9812918708",
@@ -37,7 +37,7 @@ export const OFFICIAL_ACCOUNTS: OfficialAccount[] = [
   {
     role: "Layout Deputy" as UserRole,
     name: "Ronz Abad",
-    displayName: "ABAD - Ronz Abad",
+    displayName: "Ronz Abad",
     college: "CAMP",
     email: "rcabad1@up.edu.ph",
     contact: "9270675190",
@@ -46,7 +46,7 @@ export const OFFICIAL_ACCOUNTS: OfficialAccount[] = [
   {
     role: "Layout Staffer" as UserRole,
     name: "Jam Roldan",
-    displayName: "ROLDAN - Jam Roldan",
+    displayName: "Jam Roldan",
     college: "CAMP",
     email: "lfroldan@up.edu.ph",
     contact: "9629022674",
@@ -55,7 +55,7 @@ export const OFFICIAL_ACCOUNTS: OfficialAccount[] = [
   {
     role: "Layout Staffer" as UserRole,
     name: "Carl Donor",
-    displayName: "DONOR - Carl Donor",
+    displayName: "Carl Donor",
     college: "CP",
     email: "cndonor@up.edu.ph",
     contact: "9054353693",
@@ -64,7 +64,7 @@ export const OFFICIAL_ACCOUNTS: OfficialAccount[] = [
   {
     role: "Layout Probi" as UserRole,
     name: "Jhe Umali",
-    displayName: "UMALI - Jhe Umali",
+    displayName: "Jhe Umali",
     college: "CPH",
     email: "jaumali2@up.edu.ph",
     contact: "9294904845",
@@ -73,7 +73,7 @@ export const OFFICIAL_ACCOUNTS: OfficialAccount[] = [
   {
     role: "Layout Probi" as UserRole,
     name: "Aris Musni",
-    displayName: "MUSNI - Aris Musni",
+    displayName: "Aris Musni",
     college: "CP",
     email: "ctmusni@up.edu.ph",
     contact: "9305260606",
@@ -82,7 +82,7 @@ export const OFFICIAL_ACCOUNTS: OfficialAccount[] = [
   {
     role: "Layout Probi" as UserRole,
     name: "Issa Sorio",
-    displayName: "SORIO - Issa Sorio",
+    displayName: "Issa Sorio",
     college: "CP",
     email: "casorio@up.edu.ph",
     contact: "9662691102",
@@ -91,7 +91,7 @@ export const OFFICIAL_ACCOUNTS: OfficialAccount[] = [
   {
     role: "Layout Probi" as UserRole,
     name: "Zoe Atienza",
-    displayName: "ATIENZA - Zoe Atienza",
+    displayName: "Zoe Atienza",
     college: "CAS",
     email: "ztatienza@up.edu.ph",
     contact: "9171234567",
@@ -100,7 +100,7 @@ export const OFFICIAL_ACCOUNTS: OfficialAccount[] = [
   {
     role: "Layout Probi" as UserRole,
     name: "Eve Magno",
-    displayName: "MAGNO - Eve Magno",
+    displayName: "Eve Magno",
     college: "CAS",
     email: "jcmagno1@up.edu.ph",
     contact: "9189876543",
@@ -109,7 +109,7 @@ export const OFFICIAL_ACCOUNTS: OfficialAccount[] = [
   {
     role: "Layout Probi" as UserRole,
     name: "Iris Dizon",
-    displayName: "DIZON - Iris Dizon",
+    displayName: "Iris Dizon",
     college: "CAMP",
     email: "ibdizon@up.edu.ph",
     contact: "9195551234",

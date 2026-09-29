@@ -13,6 +13,7 @@ import {
   UserRole,
   normalizeEmail 
 } from "../types";
+import { getOfficialDisplayName, resolveMemberEmail } from "./memberUtils";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
@@ -82,7 +83,7 @@ export async function fetchUserProfile(userId: string): Promise<AppProfile | nul
   if (!supabase || !userId) return null;
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, email, full_name, role, college, contact, avatar_url")
+    .select("id, email, full_name, role")
     .eq("id", userId)
     .maybeSingle();
 
@@ -98,7 +99,7 @@ export async function fetchUserProfileByEmail(email: string): Promise<AppProfile
   const normalizedEmail = normalizeEmail(email).toLowerCase();
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, email, full_name, role, college, contact, avatar_url")
+    .select("id, email, full_name, role")
     .ilike("email", normalizedEmail)
     .maybeSingle();
 
@@ -175,15 +176,18 @@ export async function upsertMember(member: Partial<TeamMember>): Promise<void> {
 // ============================================================================
 
 export function taskFromDb(row: any): Task {
+  // The tasks table has no assignee columns; the assigned artist's display name lives
+  // in illus_layout, so the assignee email is re-derived from the member registry.
+  const illusLayout = row.illus_layout || "Unassigned";
   return {
     id: row.id,
     title: row.title || "",
     typeOfRelease: row.type_of_release || "Online Article",
     typeOfContent: row.type_of_content || "feats artx",
     writer: row.writer || "",
-    illusLayout: row.illus_layout || "Unassigned",
-    assigneeEmail: row.assignee_email || undefined,
-    assigneeName: row.assignee_name || undefined,
+    illusLayout,
+    assigneeEmail: resolveMemberEmail(illusLayout) || undefined,
+    assigneeName: illusLayout !== "Unassigned" ? illusLayout : undefined,
     graphics: row.graphics || "",
     progress: (row.progress as TaskStatus) || "Not Started",
     writeup: row.writeup || "",
@@ -210,16 +214,22 @@ export function taskFromDb(row: any): Task {
 
 export function taskToDb(task: Partial<Task>): any {
   const id = ensureUuid(task.id);
+  // assignee_email/assignee_name do not exist in the tasks table; the assignment is
+  // persisted through illus_layout (the artist display name) instead.
+  const assigneeLabel =
+    task.illusLayout && task.illusLayout !== "Unassigned"
+      ? task.illusLayout
+      : task.assigneeName ||
+        (task.assigneeEmail ? getOfficialDisplayName(task.assigneeEmail) : "") ||
+        "Unassigned";
   return {
     id,
     title: task.title ?? "Untitled Task",
     type_of_release: task.typeOfRelease ?? "Online Article",
     type_of_content: task.typeOfContent ?? "feats artx",
     writer: task.writer ?? "",
-    illus_layout: task.illusLayout ?? "Unassigned",
+    illus_layout: assigneeLabel,
     graphics: task.graphics ?? "",
-    assignee_email: task.assigneeEmail ?? null,
-    assignee_name: task.assigneeName ?? null,
     progress: task.progress ?? "Not Started",
     writeup: task.writeup ?? "",
     priority: task.priority ?? "Medium",
@@ -538,15 +548,22 @@ export async function deletePoll(pollId: string): Promise<boolean> {
 // NOTIFICATIONS
 // ============================================================================
 
+// The notifications table has no per-account column, so the intended recipients are
+// stored inside read_by as "target:<email>" entries alongside plain read-receipt emails.
+const TARGET_PREFIX = "target:";
+
 export function notificationFromDb(row: any): Notification {
+  const rawReadBy: string[] = Array.isArray(row.read_by) ? row.read_by : [];
   return {
     id: row.id,
     title: row.title || "",
     message: row.message || "",
     type: row.type || "info",
     timestamp: row.timestamp || row.created_at || new Date().toISOString(),
-    readBy: Array.isArray(row.read_by) ? row.read_by : [],
-    userId: row.user_id || undefined
+    readBy: rawReadBy.filter((entry) => !entry.startsWith(TARGET_PREFIX)),
+    targetEmails: rawReadBy
+      .filter((entry) => entry.startsWith(TARGET_PREFIX))
+      .map((entry) => entry.slice(TARGET_PREFIX.length))
   };
 }
 
@@ -563,21 +580,18 @@ export async function fetchNotifications(): Promise<Notification[]> {
 export async function createNotification(n: Partial<Notification>): Promise<Notification | null> {
   if (!supabase || !n.title) return null;
   const id = ensureUuid(n.id);
-  // Alerts are per-account: resolve the target email to its profile id so each
-  // session can filter the feed down to its own rows.
-  let userId: string | null = n.userId || null;
-  if (!userId && n.targetEmail) {
-    const profile = await fetchUserProfileByEmail(n.targetEmail);
-    userId = profile?.id || null;
-  }
+  const targets = Array.from(new Set(
+    (n.targetEmails || [])
+      .map((email) => normalizeEmail(email).toLowerCase())
+      .filter(Boolean)
+  ));
   const row = {
     id,
     title: n.title,
     message: n.message || "",
     type: n.type || "info",
     timestamp: n.timestamp ? new Date(n.timestamp).toISOString() : new Date().toISOString(),
-    read_by: Array.isArray(n.readBy) ? n.readBy : [],
-    user_id: userId
+    read_by: [...(Array.isArray(n.readBy) ? n.readBy : []), ...targets.map((email) => `${TARGET_PREFIX}${email}`)]
   };
   const { data, error } = await supabase.from("notifications").insert(row).select().single();
   if (error) {

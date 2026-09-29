@@ -589,7 +589,7 @@ export function EicDashboard({
                 <p className="mt-1">No layout drafts are currently pending editorial review.</p>
               </div>
             ) : (
-              <div className="space-y-2 sm:space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-5 items-start">
                 {reviewTasks.map(task => {
                   const isSelected = selectedReviewTaskId === task.id;
                   return (

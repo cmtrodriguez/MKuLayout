@@ -41,6 +41,8 @@ export default function TeamDirectory({
   const [unavailableDays, setUnavailableDays] = useState<string[]>([]);
 
   const isLayoutEditor = currentUserRole === "Layout Editor";
+  const isLayoutDeputy = currentUserRole === "Layout Deputy";
+  const canViewWorkload = isLayoutEditor || isLayoutDeputy;
 
   const speakText = (text: string) => {
     if (!speechEnabled) return;
@@ -303,20 +305,22 @@ export default function TeamDirectory({
                     </div>
                   </div>
 
-                  {/* Workload Metric: Total Pubs Done This Semester (Replaces Points System) */}
-                  <div className="bg-neutral-50 border border-neutral-200/80 rounded-xl p-2.5 flex items-center justify-between">
-                    <div>
-                      <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider block">
-                        Sem 1 Pubs Done
+                  {/* Workload Metric: Total Pubs Done This Semester (Editor/Deputy only) */}
+                  {canViewWorkload && (
+                    <div className="bg-neutral-50 border border-neutral-200/80 rounded-xl p-2.5 flex items-center justify-between">
+                      <div>
+                        <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider block">
+                          Sem 1 Pubs Done
+                        </span>
+                        <p className="text-sm font-black text-neutral-900 font-sans">
+                          {m.currentSemPubs || 0} <span className="text-[10px] font-normal text-neutral-500">completed</span>
+                        </p>
+                      </div>
+                      <span className="text-[9px] text-neutral-400 font-mono text-right">
+                        Resets Jan 2027<br />(Sem 2)
                       </span>
-                      <p className="text-sm font-black text-neutral-900 font-sans">
-                        {m.currentSemPubs || 0} <span className="text-[10px] font-normal text-neutral-500">completed</span>
-                      </p>
                     </div>
-                    <span className="text-[9px] text-neutral-400 font-mono text-right">
-                      Resets Jan 2027<br />(Sem 2)
-                    </span>
-                  </div>
+                  )}
 
                   {/* Schedule Display */}
                   <div className="space-y-1.5 bg-neutral-50/70 p-2.5 rounded-xl border border-neutral-150">
