@@ -163,15 +163,16 @@ export default function LoginPage({ members, onLogin, speechEnabled, darkMode = 
         // Supabase is authoritative: a failed password check must never fall
         // through to the offline registry, or any password would be accepted.
         // Only a network-level failure (Supabase unreachable) falls back.
-        if (error) {
-          if (isAuthRetryableFetchError(error)) throw error;
+        if (error && !isAuthRetryableFetchError(error)) {
+          const msg = (error as { message?: string }).message;
           setErrorMsg(
-            error.message === "Invalid login credentials"
+            msg === "Invalid login credentials"
               ? "Incorrect email or password. Please try again."
-              : `Sign-in failed: ${error.message}`
+              : `Sign-in failed: ${msg || "Unknown error"}`
           );
           return;
         }
+        if (error) throw error;
       } catch (signInError) {
         console.warn("Supabase sign-in failed; falling back to manual account registry:", signInError);
       }
