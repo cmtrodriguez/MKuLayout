@@ -3,6 +3,7 @@ import { motion } from "motion/react";
 import { ArrowRight, Key, AlertCircle, Volume2, VolumeX, Shield, Mail, Sun, Moon, Users, Check, Copy, ChevronDown, ChevronUp, ShieldCheck } from "lucide-react";
 import { UserRole, TeamMember, normalizeEmail } from "../types";
 import { supabase } from "../lib/supabase";
+import { isAuthRetryableFetchError } from "@supabase/supabase-js";
 import mkuleImg from "../mkule.png";
 
 interface LoginPageProps {
@@ -161,7 +162,9 @@ export default function LoginPage({ members, onLogin, speechEnabled, darkMode = 
 
         // Supabase is authoritative: a failed password check must never fall
         // through to the offline registry, or any password would be accepted.
+        // Only a network-level failure (Supabase unreachable) falls back.
         if (error) {
+          if (isAuthRetryableFetchError(error)) throw error;
           setErrorMsg(
             error.message === "Invalid login credentials"
               ? "Incorrect email or password. Please try again."
