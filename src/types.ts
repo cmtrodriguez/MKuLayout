@@ -150,6 +150,8 @@ export interface Notification {
   type: 'info' | 'assignment' | 'deadline' | 'revision' | 'poll' | 'birthday';
   timestamp: string;
   readBy: string[]; // array of emails
+  userId?: string; // profiles.id of the single account this alert is for
+  targetEmail?: string; // resolved to userId on persist
 }
 
 export interface TaskComment {

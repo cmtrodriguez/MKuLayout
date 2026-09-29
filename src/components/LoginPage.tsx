@@ -218,12 +218,12 @@ export default function LoginPage({ members, onLogin, speechEnabled, darkMode = 
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
-        className="w-full max-w-[940px] bg-white rounded-[32px] shadow-[0_24px_70px_rgba(188,23,0,0.06)] border border-neutral-200/60 overflow-hidden flex flex-col md:flex-row min-h-[540px] z-10"
+        className="w-full max-w-[940px] bg-white rounded-[32px] shadow-[var(--brand-shadow-soft)] border border-neutral-200/60 overflow-hidden flex flex-col md:flex-row min-h-[540px] z-10"
       >
         {/* Left Pane - Vibrant Maroon/Red Gradient Panel */}
-        <div className="md:w-1/2 bg-gradient-to-br from-[#bc1700] to-[#660000] p-10 flex flex-col justify-between relative overflow-hidden text-white min-h-[280px] md:min-h-auto">
-          <div className="absolute top-1/4 left-1/4 w-72 h-72 rounded-full bg-red-500/20 blur-[80px] pointer-events-none" />
-          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-red-950/40 blur-[90px] pointer-events-none" />
+        <div className="md:w-1/2 bg-gradient-to-br from-brand-maroon to-brand-maroon-dark p-10 flex flex-col justify-between relative overflow-hidden text-white min-h-[280px] md:min-h-auto">
+          <div className="absolute top-1/4 left-1/4 w-72 h-72 rounded-full bg-brand-maroon-light/25 blur-[80px] pointer-events-none" />
+          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-brand-maroon-dark/40 blur-[90px] pointer-events-none" />
 
           {/* Large elegant logo image */}
           <div className="z-10 flex items-center gap-3">
@@ -281,7 +281,7 @@ export default function LoginPage({ members, onLogin, speechEnabled, darkMode = 
                       placeholder="Enter email"
                       value={emailInput}
                       onChange={(e) => setEmailInput(e.target.value)}
-                      className="w-full px-4 py-3 bg-white border border-neutral-200 rounded-xl text-xs text-neutral-900 placeholder-neutral-400 outline-none focus:border-[#bc1700] focus:ring-1 focus:ring-[#bc1700] transition-all font-sans"
+                      className="w-full px-4 py-3 bg-white border border-neutral-200 rounded-xl text-xs text-neutral-900 placeholder-neutral-400 outline-none focus:border-brand-maroon focus:ring-1 focus:ring-brand-maroon transition-all font-sans"
                     />
                   </div>
                 </div>
@@ -300,7 +300,7 @@ export default function LoginPage({ members, onLogin, speechEnabled, darkMode = 
                       placeholder="Enter password"
                       value={pinInput}
                       onChange={(e) => setPinInput(e.target.value)}
-                      className="w-full px-4 py-3 bg-white border border-neutral-200 rounded-xl text-xs text-neutral-900 placeholder-neutral-400 outline-none focus:border-[#bc1700] focus:ring-1 focus:ring-[#bc1700] transition-all font-sans tracking-wider"
+                      className="w-full px-4 py-3 bg-white border border-neutral-200 rounded-xl text-xs text-neutral-900 placeholder-neutral-400 outline-none focus:border-brand-maroon focus:ring-1 focus:ring-brand-maroon transition-all font-sans tracking-wider"
                     />
                   </div>
                 </div>
@@ -310,7 +310,7 @@ export default function LoginPage({ members, onLogin, speechEnabled, darkMode = 
               {/* Submit Button */}
               <button
                 type="submit"
-                className="w-full py-3 bg-gradient-to-r from-[#bc1700] to-[#660000] text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all shadow-[0_8px_25px_rgba(188,23,0,0.2)] active:scale-[0.98] cursor-pointer mt-4"
+                className="w-full py-3 bg-gradient-to-r from-brand-maroon to-brand-maroon-dark text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all shadow-[var(--brand-shadow-strong)] active:scale-[0.98] cursor-pointer mt-4"
               >
                 <span>Log In</span>
                 <ArrowRight className="w-3.5 h-3.5" />

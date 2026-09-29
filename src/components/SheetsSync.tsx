@@ -2438,7 +2438,7 @@ export default function SheetsSync({
                       cx="12"
                       cy="12"
                       r="9"
-                      stroke="#bc1700"
+                      stroke="var(--color-brand-maroon)"
                       strokeWidth="2.5"
                       fill="transparent"
                       strokeDasharray={56.5}

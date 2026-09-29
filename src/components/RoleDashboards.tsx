@@ -8,7 +8,7 @@ import {
 import { Task, TeamMember, TaskComment, UserRole } from "../types";
 import { extractHyperlinkDetails } from "../lib/canvaTemplates";
 import { formatCommentDetails, handleBulletKeyDown, RenderFormattedComment } from "../lib/commentUtils";
-import { isUserAssignedToTask } from "../lib/memberUtils";
+import { isUserAssignedToTask, resolveMemberEmail, getEditorDeputyEmails } from "../lib/memberUtils";
 
 // ==========================================
 // 1. LAYOUT STAFF DASHBOARD
@@ -21,7 +21,7 @@ interface LayoutStaffDashboardProps {
   onUpdateTask: (task: Task) => void;
   onAddComment: (commentText: string, taskId: string) => void;
   comments?: TaskComment[];
-  onAddNotification: (title: string, message: string, type: 'info' | 'assignment' | 'deadline' | 'revision' | 'poll' | 'birthday') => void;
+  onAddNotification: (title: string, message: string, type: 'info' | 'assignment' | 'deadline' | 'revision' | 'poll' | 'birthday', targetEmails?: string[]) => void;
 }
 
 export function LayoutStaffDashboard({
@@ -153,13 +153,14 @@ export function LayoutStaffDashboard({
                           onUpdateTask(updated);
                           onAddComment("LAYOUT STAFF: Marked task as accomplished! Submitted draft for editorial critique.", task.id);
                           onAddNotification(
-                            "Accomplished Layout Draft",
-                            `${currentUserName} completed the draft layout for '${task.title}' and submitted for review.`,
-                            "info"
+                            "Draft Submitted",
+                            `${currentUserName} submitted '${task.title}' for review.`,
+                            "info",
+                            getEditorDeputyEmails()
                           );
                           speakText(`Draft layout for ${task.title} submitted for review.`);
                         }}
-                        className="px-3 py-1 sm:px-4 sm:py-1.5 bg-[#bc1700] hover:bg-[#a01300] text-white text-[11px] sm:text-xs font-bold rounded-full transition-all shadow-sm cursor-pointer flex items-center gap-1.5 shrink-0"
+                        className="px-3 py-1 sm:px-4 sm:py-1.5 bg-brand-maroon hover:bg-brand-maroon-dark text-white text-[11px] sm:text-xs font-bold rounded-full transition-all shadow-sm cursor-pointer flex items-center gap-1.5 shrink-0"
                       >
                         <CheckCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-300" />
                         <span>Mark Accomplished</span>
@@ -202,8 +203,8 @@ export function LayoutStaffDashboard({
                     </div>
                   )}
 
-                  {/* Direct Link Action Cards Row (3 Clean Buttons) */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
+                  {/* Direct Link Action Cards Row (3 Clean Buttons, always one row) */}
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
                     {/* 1. ArtX Writer Draft Link */}
                     {(() => {
                       const docRaw = task.draftLink || task.addedToLayout || task.writeup || "";
@@ -218,13 +219,13 @@ export function LayoutStaffDashboard({
                           className="flex items-center justify-between p-2.5 sm:p-3 bg-red-50/80 hover:bg-red-100 border border-red-200/80 rounded-lg sm:rounded-xl transition-all group cursor-pointer"
                         >
                           <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
-                            <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#bc1700] shrink-0" />
+                            <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-brand-maroon shrink-0" />
                             <div className="min-w-0 text-left">
-                              <span className="block text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-[#bc1700]">ArtX Writer Draft</span>
+                              <span className="block text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-brand-maroon">ArtX Writer Draft</span>
                               <span className="block text-[11px] sm:text-xs font-semibold text-gray-900 truncate">{details.label || "Open Writer Document"}</span>
                             </div>
                           </div>
-                          <ExternalLink className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#bc1700] group-hover:translate-x-0.5 transition-transform shrink-0" />
+                          <ExternalLink className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-brand-maroon group-hover:translate-x-0.5 transition-transform shrink-0" />
                         </a>
                       ) : (
                         <div className="flex items-center gap-2 sm:gap-2.5 p-2 sm:p-3 bg-gray-50 border border-gray-200 rounded-lg sm:rounded-xl text-gray-400 text-xs">
@@ -299,7 +300,7 @@ export function LayoutStaffDashboard({
                   <div className="pt-2 sm:pt-3 border-t border-gray-100 space-y-2 sm:space-y-3 text-left">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5 text-xs font-bold text-gray-900">
-                        <MessageCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#bc1700]" />
+                        <MessageCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-brand-maroon" />
                         <span>Comments & Revisions ({taskComments.length})</span>
                       </div>
                       {taskComments.length > 0 && (
@@ -358,7 +359,7 @@ export function LayoutStaffDashboard({
                       <div className="flex items-start gap-1.5 sm:gap-2">
                         <textarea
                           placeholder="Reply to editor... (Enter for new line)"
-                          className="flex-1 px-2.5 py-1.5 sm:px-3 sm:py-2 border border-gray-200 rounded-lg sm:rounded-xl text-[11px] sm:text-xs outline-none focus:ring-1 focus:ring-[#bc1700] bg-white resize-none"
+                          className="flex-1 px-2.5 py-1.5 sm:px-3 sm:py-2 border border-gray-200 rounded-lg sm:rounded-xl text-[11px] sm:text-xs outline-none focus:ring-1 focus:ring-brand-maroon bg-white resize-none"
                           rows={2}
                           value={commentInputs[task.id] || ""}
                           onChange={(e) => setCommentInputs({ ...commentInputs, [task.id]: e.target.value })}
@@ -406,7 +407,7 @@ interface EicDashboardProps {
   onUpdateTask: (task: Task) => void;
   onAddComment: (commentText: string, taskId: string) => void;
   comments: TaskComment[];
-  onAddNotification?: (title: string, message: string, type: 'info' | 'assignment' | 'deadline' | 'revision' | 'poll' | 'birthday') => void;
+  onAddNotification?: (title: string, message: string, type: 'info' | 'assignment' | 'deadline' | 'revision' | 'poll' | 'birthday', targetEmails?: string[]) => void;
   currentUserRole?: UserRole;
   currentUserName?: string;
   currentUserEmail?: string;
@@ -425,7 +426,6 @@ export function EicDashboard({
 }: EicDashboardProps) {
   const [selectedReviewTaskId, setSelectedReviewTaskId] = useState<string | null>(null);
   const [revisionFeedback, setRevisionFeedback] = useState("");
-  const [commentText, setCommentText] = useState("");
   const [activeSubTab, setActiveSubTab] = useState<"review" | "pipeline">("review");
   const [pipelineSearch, setPipelineSearch] = useState("");
 
@@ -442,7 +442,7 @@ export function EicDashboard({
   if (!isEditorOrDeputy) {
     return (
       <div className="bg-white rounded-3xl p-8 sm:p-12 border border-neutral-200/80 shadow-sm text-center space-y-4 max-w-md mx-auto my-8 animate-fade-in text-left">
-        <div className="w-14 h-14 bg-red-50 text-[#bc1700] rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+        <div className="w-14 h-14 bg-red-50 text-brand-maroon rounded-2xl flex items-center justify-center mx-auto shadow-inner">
           <Lock className="w-7 h-7" />
         </div>
         <div className="space-y-1.5 text-center">
@@ -477,12 +477,12 @@ export function EicDashboard({
     onAddComment(approvalComment, task.id);
     
     if (onAddNotification) {
+      const assigneeEmail = task.assigneeEmail || resolveMemberEmail(task.illusLayout);
       onAddNotification(
-        isLayoutEditor ? "Layout Approved by Layout Editor" : "Layout Approved by EIC",
-        isLayoutEditor 
-          ? `Layout Editor approved and locked '${task.title}' for publication!` 
-          : `Editor-in-Chief approved and locked '${task.title}' for publication!`,
-        "assignment"
+        isLayoutEditor ? "Layout Approved" : "Layout Approved",
+        `Your layout '${task.title}' was approved and locked for publication.`,
+        "assignment",
+        assigneeEmail ? [assigneeEmail] : undefined
       );
     }
     setSelectedReviewTaskId(null);
@@ -505,12 +505,12 @@ export function EicDashboard({
     onAddComment(revisionFeedback.trim(), task.id);
     
     if (onAddNotification) {
+      const assigneeEmail = task.assigneeEmail || resolveMemberEmail(task.illusLayout);
       onAddNotification(
-        isLayoutEditor ? "Revision Requested by Layout Editor" : "Revision Requested by EIC",
-        isLayoutEditor
-          ? `Layout Editor requested revisions on '${task.title}'. Notes: ${revisionFeedback.trim()}`
-          : `Editor-in-Chief requested revisions on '${task.title}'. Notes: ${revisionFeedback.trim()}`,
-        "revision"
+        "Revision Requested",
+        `${isLayoutEditor ? "The layout editor" : "The EIC"} requested revisions on '${task.title}'. Check 'My Assignments'.`,
+        "revision",
+        assigneeEmail ? [assigneeEmail] : undefined
       );
     }
     
@@ -574,10 +574,10 @@ export function EicDashboard({
       </div>
 
       {activeSubTab === "review" ? (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6">
+        <div className="space-y-2.5 sm:space-y-4">
           
-          {/* Left column: Submissions requiring check */}
-          <div className="lg:col-span-2 space-y-2.5 sm:space-y-4 text-left">
+          {/* Submissions requiring check */}
+          <div className="space-y-2.5 sm:space-y-4 text-left">
             <div className="flex items-center gap-1.5 border-b pb-1 sm:pb-2 border-gray-100">
               <ClipboardList className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-brand-maroon" />
               <h3 className="font-display font-bold text-gray-950 text-xs sm:text-sm">Design Layouts Requiring Inspection</h3>
@@ -737,134 +737,6 @@ export function EicDashboard({
                 })}
               </div>
             )}
-          </div>
-
-          {/* Right column: Revamped Latest Review Comments and Direct Feedback Desk */}
-          <div className="space-y-6 text-left">
-            <div className="glass-card rounded-2xl p-5 space-y-4 bg-white border border-gray-150 shadow-sm flex flex-col h-full min-h-[480px]">
-              
-              <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-[#bc1700]/10 text-[#bc1700] rounded-lg">
-                    <MessageCircle className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3 className="font-display font-bold text-gray-900 text-sm">
-                      Latest Review Comments
-                    </h3>
-                    <p className="text-[10px] text-gray-500 font-medium">
-                      Critiques, editorial notes, and approval logs
-                    </p>
-                  </div>
-                </div>
-                <span className="text-[10px] font-mono font-bold bg-neutral-100 text-neutral-700 px-2 py-0.5 rounded-full">
-                  {comments.length}
-                </span>
-              </div>
-
-              {/* Comments Feed */}
-              <div className="space-y-3 flex-1 overflow-y-auto max-h-[420px] pr-1.5 scrollbar-thin">
-                {comments.length === 0 ? (
-                  <div className="py-12 text-center space-y-2">
-                    <MessageCircle className="w-8 h-8 text-stone-300 mx-auto" />
-                    <p className="text-xs text-stone-500 font-bold">No review comments yet.</p>
-                    <p className="text-[11px] text-stone-400">Comments posted during draft inspection or revision requests will appear here.</p>
-                  </div>
-                ) : (
-                  comments.slice(0, 15).map((comm) => {
-                    const { cleanedText, roleLabel, badgeStyle, initials } = formatCommentDetails(comm);
-                    const isRevision = comm.text.toLowerCase().includes("revision") || comm.text.toLowerCase().includes("changes needed");
-                    const isApproval = comm.text.toLowerCase().includes("approved") || comm.text.toLowerCase().includes("locked");
-                    const associatedTask = tasks.find(t => t.id === comm.taskId);
-
-                    return (
-                      <div 
-                        key={comm.id} 
-                        className={`p-3.5 rounded-2xl border transition-all text-xs space-y-2 shadow-2xs ${
-                          isRevision ? "bg-rose-50/60 border-rose-200/80" :
-                          isApproval ? "bg-emerald-50/60 border-emerald-200/80" :
-                          "bg-white border-gray-200/80"
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-center gap-2 flex-wrap min-w-0">
-                            <div className="w-6 h-6 rounded-full bg-neutral-900 text-white font-black text-[10px] flex items-center justify-center shrink-0">
-                              {initials}
-                            </div>
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="font-bold text-gray-900 text-xs truncate">{comm.authorName}</span>
-                                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${badgeStyle}`}>
-                                  {roleLabel}
-                                </span>
-                              </div>
-                              {associatedTask && (
-                                <span className="text-[9px] font-semibold text-gray-500 truncate block max-w-[200px] mt-0.5">
-                                  Task: {associatedTask.title}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          <span className="text-[9px] font-mono text-gray-400 shrink-0">
-                            {new Date(comm.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>                        <div className="bg-white/80 p-2.5 rounded-xl border border-gray-100 text-xs text-left">
-                          <RenderFormattedComment text={cleanedText} isEditorRole={roleLabel.includes("Editor") || roleLabel.includes("EIC")} />
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-
-              {/* Quick Comment Input for Selected or Active Task */}
-              <div className="pt-3 border-t border-stone-150 space-y-2 text-left">
-                <label className="text-[10px] font-bold text-stone-600 block uppercase tracking-wider">
-                  Post Quick Review Comment {selectedReviewTaskId ? `(Task selected)` : `(General)`}
-                </label>
-                <div className="flex gap-2 items-start">
-                  <textarea
-                    placeholder="Type review note or feedback (type '- ' for bullet points, press Enter for new line)..."
-                    value={commentText}
-                    rows={2}
-                    onChange={(e) => setCommentText(e.target.value)}
-                    onKeyDown={(e) => {
-                      handleBulletKeyDown(e, commentText, setCommentText, () => {
-                        if (commentText.trim()) {
-                          const targetId = selectedReviewTaskId || (reviewTasks[0]?.id || tasks[0]?.id || "");
-                          if (targetId) {
-                            onAddComment(commentText.trim(), targetId);
-                            setCommentText("");
-                            speakText("Review comment posted!");
-                          }
-                        }
-                      });
-                    }}
-                    className="flex-1 px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs outline-none focus:bg-white focus:ring-1 focus:ring-[#bc1700] resize-none"
-                  />
-                  <button
-                    onClick={() => {
-                      if (commentText.trim()) {
-                        const targetId = selectedReviewTaskId || (reviewTasks[0]?.id || tasks[0]?.id || "");
-                        if (targetId) {
-                          onAddComment(commentText.trim(), targetId);
-                          setCommentText("");
-                          speakText("Review comment posted!");
-                        }
-                      }
-                    }}
-                    className="px-3.5 py-2.5 bg-[#bc1700] hover:bg-[#a01300] text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-sm self-stretch flex items-center justify-center shrink-0"
-                  >
-                    Post
-                  </button>
-                </div>
-                <p className="text-[10px] text-gray-400 font-medium">
-                  Press <kbd className="px-1 py-0.5 bg-gray-100 border rounded text-[9px]">Enter</kbd> for new line, <kbd className="px-1 py-0.5 bg-gray-100 border rounded text-[9px]">- </kbd> for bullets, or <kbd className="px-1 py-0.5 bg-gray-100 border rounded text-[9px]">Ctrl+Enter</kbd> to submit.
-                </p>
-              </div>
-
-            </div>
           </div>
 
         </div>

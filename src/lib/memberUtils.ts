@@ -258,3 +258,30 @@ export function isUserAssignedToTask(task: { illusLayout?: string; graphics?: st
 
   return false;
 }
+
+/**
+ * Resolve any name label (preferred first name, official name, display name) or email
+ * to the canonical official account email. Empty string when unknown.
+ */
+export function resolveMemberEmail(nameOrEmail?: string | null): string {
+  const needle = (nameOrEmail || "").trim().toLowerCase();
+  if (!needle || needle === "unassigned") return "";
+  const all = Object.values(OFFICIAL_MEMBERS_MAP);
+  if (needle.includes("@")) {
+    return all.find(m => m.email.toLowerCase() === needle)?.email || needle;
+  }
+  return (
+    all.find(m =>
+      m.preferredFirstName.toLowerCase() === needle ||
+      m.officialName.toLowerCase().includes(needle) ||
+      m.displayName.toLowerCase().includes(needle)
+    )?.email || ""
+  );
+}
+
+/** Emails of the Layout Editor and Layout Deputy accounts (review/approval alerts). */
+export function getEditorDeputyEmails(): string[] {
+  return Object.values(OFFICIAL_MEMBERS_MAP)
+    .filter(m => m.role === "Layout Editor" || m.role === "Layout Deputy")
+    .map(m => m.email);
+}

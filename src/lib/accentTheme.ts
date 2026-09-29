@@ -23,4 +23,17 @@ export function applyAccentCssVars(color: AccentTheme) {
   root.style.setProperty("--color-brand-maroon-light", palette.light);
   root.style.setProperty("--color-brand-maroon-dark", palette.dark);
   root.style.setProperty("--color-brand-red", palette.primary);
+
+  // Accent-tinted drop shadows so glows follow the chosen brand color.
+  const rgb = hexToRgb(palette.primary);
+  root.style.setProperty("--brand-shadow-soft", `0 24px 70px rgba(${rgb}, 0.06)`);
+  root.style.setProperty("--brand-shadow-med", `0 8px 20px rgba(${rgb}, 0.15)`);
+  root.style.setProperty("--brand-shadow-strong", `0 8px 25px rgba(${rgb}, 0.2)`);
+}
+
+function hexToRgb(hex: string): string {
+  const clean = hex.replace("#", "");
+  const full = clean.length === 3 ? clean.split("").map(c => c + c).join("") : clean;
+  const num = parseInt(full, 16);
+  return `${(num >> 16) & 255}, ${(num >> 8) & 255}, ${num & 255}`;
 }

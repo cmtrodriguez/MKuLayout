@@ -134,12 +134,12 @@ export default function AccessibilityPanel({
         >
           <div className="flex items-center justify-between border-b pb-2 border-gray-100 dark:border-neutral-800">
             <h3 className="font-display font-bold text-gray-900 dark:text-neutral-100 text-sm flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-brand-red dark:text-red-400" />
+              <Sparkles className="w-4 h-4 text-brand-red dark:text-brand-maroon-light" />
               WCAG 2.2 AA Options
             </h3>
             <button
               onClick={resetAll}
-              className="text-xs text-brand-maroon dark:text-red-400 hover:underline flex items-center gap-1 cursor-pointer"
+              className="text-xs text-brand-maroon dark:text-brand-maroon-light hover:underline flex items-center gap-1 cursor-pointer"
               aria-label="Reset accessibility preferences"
             >
               <RefreshCw className="w-3 h-3" /> Reset
@@ -162,7 +162,7 @@ export default function AccessibilityPanel({
                 }
               }}
               className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer ${
-                darkMode ? "bg-brand-maroon dark:bg-red-700" : "bg-gray-200 dark:bg-neutral-700"
+                darkMode ? "bg-brand-maroon" : "bg-gray-200 dark:bg-neutral-700"
               }`}
               role="switch"
               aria-checked={darkMode}
@@ -187,7 +187,7 @@ export default function AccessibilityPanel({
                 speakText(`High contrast mode ${!highContrast ? "activated" : "deactivated"}`);
               }}
               className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer ${
-                highContrast ? "bg-brand-maroon dark:bg-red-700" : "bg-gray-200 dark:bg-neutral-700"
+                highContrast ? "bg-brand-maroon" : "bg-gray-200 dark:bg-neutral-700"
               }`}
               role="switch"
               aria-checked={highContrast}
@@ -212,7 +212,7 @@ export default function AccessibilityPanel({
                 speakText(`Dyslexic friendly font ${!dyslexicFont ? "activated" : "deactivated"}`);
               }}
               className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer ${
-                dyslexicFont ? "bg-brand-maroon dark:bg-red-700" : "bg-gray-200 dark:bg-neutral-700"
+                dyslexicFont ? "bg-brand-maroon" : "bg-gray-200 dark:bg-neutral-700"
               }`}
               role="switch"
               aria-checked={dyslexicFont}
@@ -231,7 +231,7 @@ export default function AccessibilityPanel({
               <span className="flex items-center gap-2">
                 <Type className="w-4 h-4 text-gray-500 dark:text-neutral-400" /> Text Size Multiplier
               </span>
-              <span className="font-mono text-brand-maroon dark:text-red-400">{Math.round(fontSizeMultiplier * 100)}%</span>
+              <span className="font-mono text-brand-maroon dark:text-brand-maroon-light">{Math.round(fontSizeMultiplier * 100)}%</span>
             </div>
             <input
               type="range"
@@ -265,7 +265,7 @@ export default function AccessibilityPanel({
                 }
               }}
               className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer ${
-                speechEnabled ? "bg-brand-maroon dark:bg-red-700" : "bg-gray-200 dark:bg-neutral-700"
+                speechEnabled ? "bg-brand-maroon" : "bg-gray-200 dark:bg-neutral-700"
               }`}
               role="switch"
               aria-checked={speechEnabled}

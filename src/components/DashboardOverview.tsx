@@ -3,12 +3,12 @@ import {
   Plus, Calendar as CalendarIcon, RefreshCw, CheckCircle, 
   Clock, Flame, Users, BookOpen, BellRing, CheckSquare, Sparkles,
   ArrowRight, Award, Trophy, GraduationCap, ChevronRight, FileText, Vote,
-  Folder, ExternalLink, Trash2, X, BarChart3, Filter, Maximize2, Minimize2,
-  CalendarDays, CheckCircle2, ChevronLeft, Lock, Tag
+  Folder, ExternalLink, Trash2, X, BarChart3, Filter,
+  CheckCircle2, Tag
 } from "lucide-react";
-import { Task, TeamMember, CalendarEvent, Poll, PersonalCalendarEvent } from "../types";
+import { Task, TeamMember, CalendarEvent, Poll } from "../types";
 import { getPreferredFirstName, isUserAssignedToTask } from "../lib/memberUtils";
-import { fetchPersonalEvents, upsertPersonalEvent, deletePersonalEvent, createPoll, updatePollOptionVotes, deletePoll, createAnnouncement, deleteAnnouncement } from "../lib/supabase";
+import { createPoll, updatePollOptionVotes, deletePoll, createAnnouncement, deleteAnnouncement } from "../lib/supabase";
 import CalendarView from "./CalendarView";
 import MeetingPolls from "./MeetingPolls";
 
@@ -57,97 +57,6 @@ export default function DashboardOverview({
   // Staffer & Probi Personal Task Stats & Category period
   const [staffStatsPeriod, setStaffStatsPeriod] = useState<"semester" | "month">("semester");
   const [staffStatsMonth, setStaffStatsMonth] = useState<string>("September");
-
-  // Personal Events state for Staffer & Probi (Private to logged-in user)
-  const [personalEvents, setPersonalEvents] = useState<PersonalCalendarEvent[]>(() => {
-    try {
-      const saved = localStorage.getItem(`mkule_personal_events_${currentUserEmail}`);
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const [showPersonalCalendarModal, setShowPersonalCalendarModal] = useState(false);
-  const [calendarMonth, setCalendarMonth] = useState(() => new Date());
-  const [selectedCalendarDate, setSelectedCalendarDate] = useState<string>(() => {
-    return new Date().toISOString().split("T")[0];
-  });
-  const [newEventTitle, setNewEventTitle] = useState("");
-  const [newEventCategory, setNewEventCategory] = useState<"Reminder" | "Task Target" | "Meeting" | "Personal">("Reminder");
-  const [newEventTime, setNewEventTime] = useState("");
-  const [newEventNotes, setNewEventNotes] = useState("");
-
-  // Sync personal events from Supabase
-  useEffect(() => {
-    if (!currentUserEmail) return;
-    fetchPersonalEvents(currentUserEmail).then(evs => {
-      if (evs.length > 0) {
-        setPersonalEvents(evs);
-        localStorage.setItem(`mkule_personal_events_${currentUserEmail}`, JSON.stringify(evs));
-      }
-    }).catch(() => {
-      // If Supabase unavailable, fall back to cached localStorage data
-    });
-  }, [currentUserEmail]);
-
-  const handleAddPersonalEvent = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newEventTitle.trim()) return;
-
-    const newEv: PersonalCalendarEvent = {
-      id: crypto.randomUUID(),
-      userEmail: currentUserEmail,
-      title: newEventTitle.trim(),
-      date: selectedCalendarDate,
-      time: newEventTime.trim() || undefined,
-      category: newEventCategory,
-      notes: newEventNotes.trim() || undefined,
-      completed: false,
-      createdAt: new Date().toISOString()
-    };
-
-    const nextEvents = [newEv, ...personalEvents];
-    setPersonalEvents(nextEvents);
-    localStorage.setItem(`mkule_personal_events_${currentUserEmail}`, JSON.stringify(nextEvents));
-
-    try {
-      await upsertPersonalEvent(newEv);
-    } catch (err) {
-      console.error("Failed to save personal event:", err);
-    }
-
-    setNewEventTitle("");
-    setNewEventTime("");
-    setNewEventNotes("");
-    speakText(`Personal event added for ${selectedCalendarDate}`);
-  };
-
-  const handleToggleEventCompleted = async (id: string) => {
-    const updated = personalEvents.map(ev => ev.id === id ? { ...ev, completed: !ev.completed } : ev);
-    setPersonalEvents(updated);
-    localStorage.setItem(`mkule_personal_events_${currentUserEmail}`, JSON.stringify(updated));
-    const target = updated.find(ev => ev.id === id);
-    if (target) {
-      try {
-        await upsertPersonalEvent(target);
-      } catch (err) {
-        console.error("Failed to update personal event:", err);
-      }
-    }
-  };
-
-  const handleDeletePersonalEvent = async (id: string) => {
-    const nextEvents = personalEvents.filter(ev => ev.id !== id);
-    setPersonalEvents(nextEvents);
-    localStorage.setItem(`mkule_personal_events_${currentUserEmail}`, JSON.stringify(nextEvents));
-    try {
-      await deletePersonalEvent(id, currentUserEmail);
-    } catch (err) {
-      console.error("Failed to delete personal event:", err);
-    }
-    speakText("Personal event removed.");
-  };
 
   // Announcement state
   const [showAddAnnouncement, setShowAddAnnouncement] = useState(false);
@@ -388,7 +297,7 @@ export default function DashboardOverview({
                 }}
                 className={`px-2.5 sm:px-4 py-1 sm:py-2 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1 sm:gap-2 cursor-pointer flex-1 sm:flex-initial justify-center ${
                   overviewTab === "desk"
-                    ? "bg-gradient-to-r from-[#bc1700] to-[#660000] text-white shadow-md shadow-red-950/20"
+                    ? "bg-gradient-to-r from-brand-maroon to-brand-maroon-dark text-white shadow-md shadow-red-950/20"
                     : "text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200/50 dark:hover:bg-neutral-700"
                 }`}
               >
@@ -406,7 +315,7 @@ export default function DashboardOverview({
                 }}
                 className={`px-2.5 sm:px-4 py-1 sm:py-2 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1 sm:gap-2 cursor-pointer flex-1 sm:flex-initial justify-center ${
                   overviewTab === "calendar"
-                    ? "bg-gradient-to-r from-[#bc1700] to-[#660000] text-white shadow-md shadow-red-950/20"
+                    ? "bg-gradient-to-r from-brand-maroon to-brand-maroon-dark text-white shadow-md shadow-red-950/20"
                     : "text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200/50 dark:hover:bg-neutral-700"
                 }`}
               >
@@ -424,7 +333,7 @@ export default function DashboardOverview({
                 }}
                 className={`px-2.5 sm:px-4 py-1 sm:py-2 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1 sm:gap-2 cursor-pointer flex-1 sm:flex-initial justify-center ${
                   overviewTab === "polls"
-                    ? "bg-gradient-to-r from-[#bc1700] to-[#660000] text-white shadow-md shadow-red-950/20"
+                    ? "bg-gradient-to-r from-brand-maroon to-brand-maroon-dark text-white shadow-md shadow-red-950/20"
                     : "text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200/50 dark:hover:bg-neutral-700"
                 }`}
               >
@@ -456,7 +365,7 @@ export default function DashboardOverview({
                   <span className="text-lg sm:text-2xl font-black text-neutral-900 dark:text-neutral-100 font-sans tracking-tight">
                     {activeTasks.length}
                   </span>
-                  <span className="p-1 sm:p-2 bg-neutral-50 dark:bg-neutral-800 rounded-lg sm:rounded-xl text-neutral-500 dark:text-neutral-400 group-hover:bg-red-50 dark:group-hover:bg-red-950/40 group-hover:text-[#bc1700] dark:group-hover:text-red-400 transition-all">
+                  <span className="p-1 sm:p-2 bg-neutral-50 dark:bg-neutral-800 rounded-lg sm:rounded-xl text-neutral-500 dark:text-neutral-400 group-hover:bg-red-50 dark:group-hover:bg-red-950/40 group-hover:text-brand-maroon dark:group-hover:text-red-400 transition-all">
                     <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </span>
                 </div>
@@ -516,7 +425,7 @@ export default function DashboardOverview({
                   <span className="text-lg sm:text-2xl font-black text-neutral-900 dark:text-neutral-100 font-sans tracking-tight">
                     {activeArtistsCount}
                   </span>
-                  <span className="p-1 sm:p-2 bg-neutral-50 dark:bg-neutral-800 rounded-lg sm:rounded-xl text-neutral-500 dark:text-neutral-400 group-hover:bg-red-50 dark:group-hover:bg-red-950/40 group-hover:text-[#bc1700] dark:group-hover:text-red-400 transition-all">
+                  <span className="p-1 sm:p-2 bg-neutral-50 dark:bg-neutral-800 rounded-lg sm:rounded-xl text-neutral-500 dark:text-neutral-400 group-hover:bg-red-50 dark:group-hover:bg-red-950/40 group-hover:text-brand-maroon dark:group-hover:text-red-400 transition-all">
                     <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </span>
                 </div>
@@ -550,7 +459,7 @@ export default function DashboardOverview({
                 ) : (
                   displayTasks.map((task, idx) => {
                     const colors = [
-                      { bg: "bg-[#fdf4f2] dark:bg-neutral-900/90", tagBg: "bg-[#fcdfd8] dark:bg-red-950/60", tagText: "text-[#bc1700] dark:text-red-300", text: "text-[#660000] dark:text-neutral-100", barColor: "bg-[#bc1700]" },
+                      { bg: "bg-[#fdf4f2] dark:bg-neutral-900/90", tagBg: "bg-brand-maroon/10 dark:bg-brand-maroon/25", tagText: "text-brand-maroon dark:text-brand-maroon-light", text: "text-brand-maroon-dark dark:text-neutral-100", barColor: "bg-brand-maroon" },
                       { bg: "bg-[#f5faf8] dark:bg-neutral-900/90", tagBg: "bg-[#def2e9] dark:bg-emerald-950/60", tagText: "text-[#0f766e] dark:text-emerald-300", text: "text-[#042f2e] dark:text-neutral-100", barColor: "bg-emerald-600" },
                       { bg: "bg-[#fcfdf2] dark:bg-neutral-900/90", tagBg: "bg-[#f3f7ca] dark:bg-lime-950/60", tagText: "text-[#6c7d0f] dark:text-lime-300", text: "text-[#1a2e05] dark:text-neutral-100", barColor: "bg-lime-600" },
                       { bg: "bg-[#faf5f8] dark:bg-neutral-900/90", tagBg: "bg-[#f5daeb] dark:bg-pink-950/60", tagText: "text-[#b01e74] dark:text-pink-300", text: "text-[#3d0322] dark:text-neutral-100", barColor: "bg-rose-500" }
@@ -612,7 +521,7 @@ export default function DashboardOverview({
                 </h3>
                 <button 
                   onClick={() => setOverviewTab("calendar")}
-                  className="text-[11px] sm:text-xs text-[#bc1700] dark:text-red-400 hover:underline font-bold cursor-pointer"
+                  className="text-[11px] sm:text-xs text-brand-maroon dark:text-brand-maroon-light hover:underline font-bold cursor-pointer"
                 >
                   See all
                 </button>
@@ -620,7 +529,7 @@ export default function DashboardOverview({
 
               <div className="bg-white dark:bg-neutral-900 rounded-xl sm:rounded-[24px] p-3 sm:p-5 border border-neutral-200/60 dark:border-neutral-800 shadow-sm space-y-2 sm:space-y-3">
                 <div className="flex items-center gap-1.5 sm:gap-2 pb-1 border-b border-neutral-100 dark:border-neutral-800">
-                  <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#bc1700] animate-pulse" />
+                  <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-brand-maroon animate-pulse" />
                   <h4 className="font-sans font-black text-[10px] sm:text-xs text-neutral-800 dark:text-neutral-200 uppercase tracking-widest">
                     Latest Tasks & Deadlines
                   </h4>
@@ -639,7 +548,7 @@ export default function DashboardOverview({
                       >
                         <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
                           <div className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl shrink-0 ${
-                            e.type === "deadline" ? "bg-red-50 dark:bg-red-950/50 text-[#bc1700] dark:text-red-400" :
+                            e.type === "deadline" ? "bg-brand-maroon/5 dark:bg-brand-maroon/20 text-brand-maroon dark:text-brand-maroon-light" :
                             e.type === "meeting" ? "bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400" : "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400"
                           }`}>
                             <Award className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
@@ -669,7 +578,7 @@ export default function DashboardOverview({
                 {isEditorOrDeputy && (
                   <button
                     onClick={onAddTask}
-                    className="w-full py-2 sm:py-2.5 bg-gradient-to-r from-[#bc1700] to-[#660000] hover:shadow-md text-white font-bold rounded-lg sm:rounded-xl text-[11px] sm:text-xs flex items-center justify-center gap-1.5 transition-all shadow-[0_8px_20px_rgba(188,23,0,0.15)] cursor-pointer"
+                    className="w-full py-2 sm:py-2.5 bg-gradient-to-r from-brand-maroon to-brand-maroon-dark hover:shadow-md text-white font-bold rounded-lg sm:rounded-xl text-[11px] sm:text-xs flex items-center justify-center gap-1.5 transition-all shadow-[var(--brand-shadow-med)] cursor-pointer"
                   >
                     <Plus className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                     <span>Create New Assignment</span>
@@ -684,10 +593,10 @@ export default function DashboardOverview({
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-2.5 sm:gap-4 pt-0 sm:pt-1">
             
             {/* Layout Desk Announcements (Editor & Deputy can add/remove, reflected across all) */}
-            <div className={`${!isEditorOrDeputy ? "lg:col-span-12" : "lg:col-span-5"} bg-white dark:bg-neutral-900 rounded-xl sm:rounded-[24px] p-3 sm:p-5 border border-neutral-200/60 dark:border-neutral-800 shadow-sm space-y-2 sm:space-y-3`}>
+            <div className={`lg:col-span-5 bg-white dark:bg-neutral-900 rounded-xl sm:rounded-[24px] p-3 sm:p-5 border border-neutral-200/60 dark:border-neutral-800 shadow-sm space-y-2 sm:space-y-3`}>
               <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-1.5 sm:pb-2">
                 <h3 className="font-sans font-black text-neutral-900 dark:text-neutral-100 text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
-                  <BellRing className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#bc1700]" />
+                  <BellRing className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-brand-maroon" />
                   Layout Desk Announcements
                 </h3>
                 
@@ -696,12 +605,12 @@ export default function DashboardOverview({
                     <button
                       type="button"
                       onClick={() => setShowAddAnnouncement(!showAddAnnouncement)}
-                      className="px-2 py-0.5 text-[9px] font-bold bg-[#bc1700] text-white rounded-md hover:bg-[#8e1200] transition-colors flex items-center gap-1 cursor-pointer"
+                      className="px-2 py-0.5 text-[9px] font-bold bg-brand-maroon text-white rounded-md hover:bg-brand-maroon-dark transition-colors flex items-center gap-1 cursor-pointer"
                     >
                       <Plus className="w-2.5 h-2.5" /> Post
                     </button>
                   )}
-                  <span className="text-[8px] sm:text-[9px] bg-red-50 dark:bg-red-950/50 text-[#bc1700] dark:text-red-400 px-1.5 sm:px-2 py-0.5 rounded-full font-bold uppercase tracking-widest">
+                  <span className="text-[8px] sm:text-[9px] bg-brand-maroon/5 dark:bg-brand-maroon/20 text-brand-maroon dark:text-brand-maroon-light px-1.5 sm:px-2 py-0.5 rounded-full font-bold uppercase tracking-widest">
                     Live
                   </span>
                 </div>
@@ -711,7 +620,7 @@ export default function DashboardOverview({
               {showAddAnnouncement && isEditorOrDeputy && (
                 <form onSubmit={handleAddAnnouncement} className="p-3 bg-red-50/60 dark:bg-neutral-800 rounded-xl border border-red-200 dark:border-neutral-700 space-y-2 text-xs">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-[11px] text-[#bc1700] dark:text-red-400">Create Desk Announcement</span>
+                    <span className="font-bold text-[11px] text-brand-maroon dark:text-brand-maroon-light">Create Desk Announcement</span>
                     <button type="button" onClick={() => setShowAddAnnouncement(false)} className="text-neutral-400 hover:text-neutral-600">
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -734,7 +643,7 @@ export default function DashboardOverview({
                   />
                   <button
                     type="submit"
-                    className="w-full py-1.5 bg-[#bc1700] hover:bg-[#8e1200] text-white font-bold rounded-lg text-[10px] cursor-pointer shadow-xs"
+                    className="w-full py-1.5 bg-brand-maroon hover:bg-brand-maroon-dark text-white font-bold rounded-lg text-[10px] cursor-pointer shadow-xs"
                   >
                     Broadcast to All Members
                   </button>
@@ -774,7 +683,7 @@ export default function DashboardOverview({
                         {ann.content}
                       </p>
                       <div className="flex items-center justify-between pt-1 border-t border-neutral-200/10 dark:border-neutral-700/50">
-                        <span className="text-[8px] sm:text-[9px] bg-red-50 dark:bg-red-950/60 text-[#bc1700] dark:text-red-300 font-bold uppercase px-1.5 py-0.5 rounded">
+                        <span className="text-[8px] sm:text-[9px] bg-brand-maroon/5 dark:bg-brand-maroon/20 text-brand-maroon dark:text-brand-maroon-light font-bold uppercase px-1.5 py-0.5 rounded">
                           {ann.author}
                         </span>
                       </div>
@@ -793,7 +702,7 @@ export default function DashboardOverview({
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-neutral-100 dark:border-neutral-800 gap-2">
                   <div>
                     <h3 className="font-sans font-black text-neutral-900 dark:text-neutral-100 text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
-                      <BarChart3 className="w-4 h-4 text-[#bc1700]" />
+                      <BarChart3 className="w-4 h-4 text-brand-maroon" />
                       Workload Tracker (Online Pubs vs Issues)
                     </h3>
                     <p className="text-[9px] sm:text-[10px] text-neutral-400 dark:text-neutral-500">
@@ -808,7 +717,7 @@ export default function DashboardOverview({
                       onClick={() => setWorkloadPeriod("semester")}
                       className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
                         workloadPeriod === "semester"
-                          ? "bg-white dark:bg-neutral-700 text-[#bc1700] dark:text-red-400 shadow-xs"
+                          ? "bg-white dark:bg-neutral-700 text-brand-maroon dark:text-brand-maroon-light shadow-xs"
                           : "text-neutral-600 dark:text-neutral-300 hover:text-neutral-900"
                       }`}
                     >
@@ -819,7 +728,7 @@ export default function DashboardOverview({
                       onClick={() => setWorkloadPeriod("month")}
                       className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
                         workloadPeriod === "month"
-                          ? "bg-white dark:bg-neutral-700 text-[#bc1700] dark:text-red-400 shadow-xs"
+                          ? "bg-white dark:bg-neutral-700 text-brand-maroon dark:text-brand-maroon-light shadow-xs"
                           : "text-neutral-600 dark:text-neutral-300 hover:text-neutral-900"
                       }`}
                     >
@@ -832,7 +741,7 @@ export default function DashboardOverview({
                 <div className="flex flex-wrap items-center justify-between text-xs gap-2 pt-0.5">
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-xs bg-[#bc1700]" />
+                      <span className="w-2.5 h-2.5 rounded-xs bg-brand-maroon" />
                       <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-300">Online Pubs</span>
                     </div>
                     <div className="flex items-center gap-1.5">
@@ -908,14 +817,14 @@ export default function DashboardOverview({
                               width={barWidth}
                               height={onlineHeight}
                               rx={3}
-                              className="fill-[#bc1700] hover:fill-[#8e1200] transition-all"
+                              className="fill-brand-maroon hover:fill-brand-maroon-dark transition-all"
                             />
                             {/* Online count */}
                             <text
                               x={groupX + barWidth / 2}
                               y={onlineY - 3}
                               textAnchor="middle"
-                              className="font-mono text-[8px] font-bold fill-[#bc1700] dark:fill-red-400"
+                              className="font-mono text-[8px] font-bold fill-brand-maroon dark:fill-red-400"
                             >
                               {d.onlinePubs}
                             </text>
@@ -968,12 +877,11 @@ export default function DashboardOverview({
             {/* PERSONAL WORKLOAD & MINI CALENDAR FOR LAYOUT STAFFER & PROBI */}
             {isStaffOrProbi && (
               <div className="lg:col-span-7">
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 sm:gap-4">
-                  <div className="bg-white dark:bg-neutral-900 rounded-xl sm:rounded-[24px] p-3.5 sm:p-5 border border-neutral-200/60 dark:border-neutral-800 shadow-sm space-y-3.5">
+                <div className="bg-white dark:bg-neutral-900 rounded-xl sm:rounded-[24px] p-3.5 sm:p-5 border border-neutral-200/60 dark:border-neutral-800 shadow-sm space-y-3.5">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-neutral-100 dark:border-neutral-800 gap-2">
                       <div>
                         <h3 className="font-sans font-black text-neutral-900 dark:text-neutral-100 text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
-                          <BarChart3 className="w-4 h-4 text-[#bc1700]" />
+                          <BarChart3 className="w-4 h-4 text-brand-maroon" />
                           My Completed Layout Tasks &amp; Categories
                         </h3>
                         <p className="text-[9px] sm:text-[10px] text-neutral-400 dark:text-neutral-500">
@@ -987,7 +895,7 @@ export default function DashboardOverview({
                           onClick={() => setStaffStatsPeriod("semester")}
                           className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
                             staffStatsPeriod === "semester"
-                              ? "bg-white dark:bg-neutral-700 text-[#bc1700] dark:text-red-400 shadow-xs"
+                              ? "bg-white dark:bg-neutral-700 text-brand-maroon dark:text-brand-maroon-light shadow-xs"
                               : "text-neutral-600 dark:text-neutral-300 hover:text-neutral-900"
                           }`}
                         >
@@ -998,7 +906,7 @@ export default function DashboardOverview({
                           onClick={() => setStaffStatsPeriod("month")}
                           className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
                             staffStatsPeriod === "month"
-                              ? "bg-white dark:bg-neutral-700 text-[#bc1700] dark:text-red-400 shadow-xs"
+                              ? "bg-white dark:bg-neutral-700 text-brand-maroon dark:text-brand-maroon-light shadow-xs"
                               : "text-neutral-600 dark:text-neutral-300 hover:text-neutral-900"
                           }`}
                         >
@@ -1044,7 +952,7 @@ export default function DashboardOverview({
 
                     <div>
                       <h4 className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-2 flex items-center gap-1">
-                        <Tag className="w-3 h-3 text-[#bc1700]" /> Editorial Content Categories Breakdown
+                        <Tag className="w-3 h-3 text-brand-maroon" /> Editorial Content Categories Breakdown
                       </h4>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                         {CATEGORIES.map(cat => {
@@ -1070,338 +978,9 @@ export default function DashboardOverview({
                       </div>
                     </div>
                   </div>
-
-                  <div className="bg-white dark:bg-neutral-900 rounded-xl sm:rounded-[24px] p-3.5 sm:p-5 border border-neutral-200/60 dark:border-neutral-800 shadow-sm space-y-3">
-                    <div className="flex items-center justify-between pb-2 border-b border-neutral-100 dark:border-neutral-800">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-red-50 dark:bg-red-950/60 text-[#bc1700] dark:text-red-400 flex items-center justify-center">
-                          <CalendarDays className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <h3 className="font-sans font-black text-neutral-900 dark:text-neutral-100 text-xs sm:text-sm">
-                            Personal Event Calendar &amp; Reminders
-                          </h3>
-                          <p className="text-[9px] sm:text-[10px] text-neutral-400 dark:text-neutral-500">
-                            Private to you ({getPreferredFirstName(currentUserName, currentUserEmail)}) • Saved across logins
-                          </p>
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => setShowPersonalCalendarModal(true)}
-                        className="px-2.5 py-1 bg-[#bc1700] hover:bg-[#8e1200] text-white rounded-lg text-[10px] font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
-                      >
-                        <Maximize2 className="w-3 h-3" />
-                        <span>Expand Calendar</span>
-                      </button>
-                    </div>
-
-                    <div 
-                      onClick={() => setShowPersonalCalendarModal(true)}
-                      className="p-3 bg-neutral-50/70 dark:bg-neutral-850 rounded-xl border border-neutral-200/50 dark:border-neutral-800 cursor-pointer hover:border-[#bc1700]/50 transition-all group"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-bold text-xs text-neutral-800 dark:text-neutral-200">
-                          {calendarMonth.toLocaleString("en-US", { month: "long", year: "numeric" })}
-                        </span>
-                        <span className="text-[10px] text-[#bc1700] dark:text-red-400 font-bold group-hover:underline flex items-center gap-1">
-                          <span>{personalEvents.length} personal items</span>
-                          <ChevronRight className="w-3 h-3" />
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-7 gap-1 text-center text-[9px] font-mono">
-                        {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(day => (
-                          <div key={day} className="text-neutral-400 font-bold py-0.5">{day}</div>
-                        ))}
-
-                        {Array.from({ length: 42 }).map((_, index) => {
-                          const firstDay = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1);
-                          const offset = (firstDay.getDay() + 6) % 7;
-                          const dayNumber = index - offset + 1;
-                          const thisDate = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), dayNumber);
-                          const isCurrentMonth = thisDate.getMonth() === calendarMonth.getMonth();
-                          const isToday = thisDate.toDateString() === new Date().toDateString();
-                          const iso = thisDate.toISOString().split('T')[0];
-                          const dayEvents = personalEvents.filter(ev => ev.date === iso);
-
-                          return (
-                            <div
-                              key={`${calendarMonth.getMonth()}-${index}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedCalendarDate(iso);
-                                setShowPersonalCalendarModal(true);
-                              }}
-                              className={`min-h-[54px] rounded-md border p-1 text-left transition-all ${
-                                isCurrentMonth ? 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-700' : 'bg-neutral-100/60 dark:bg-neutral-800/30 border-transparent text-neutral-300'
-                              } ${isToday ? 'ring-1 ring-[#bc1700] bg-[#fff5f4] dark:bg-[#2a120f]' : ''}`}
-                            >
-                              <div className={`text-[9px] font-bold ${isToday ? 'text-[#bc1700]' : 'text-neutral-700 dark:text-neutral-200'}`}>
-                                {isCurrentMonth ? thisDate.getDate() : ''}
-                              </div>
-                              <div className="mt-1 space-y-0.5 overflow-hidden">
-                                {dayEvents.slice(0, 2).map(event => (
-                                  <div key={event.id} className="truncate rounded bg-red-50 dark:bg-red-950/50 px-1 text-[7px] text-[#bc1700] dark:text-red-300 font-bold">
-                                    {event.title}
-                                  </div>
-                                ))}
-                                {dayEvents.length > 2 && (
-                                  <div className="text-[7px] font-bold text-neutral-500">+{dayEvents.length - 2}</div>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {personalEvents.length > 0 && (
-                      <div className="space-y-1.5 pt-1">
-                        <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
-                          Upcoming Personal Reminders
-                        </div>
-                        <div className="space-y-1">
-                          {personalEvents.slice(0, 3).map(ev => (
-                            <div 
-                              key={ev.id}
-                              className="flex items-center justify-between p-2 rounded-lg bg-neutral-50 dark:bg-neutral-800 text-xs border border-neutral-150 dark:border-neutral-750"
-                            >
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="checkbox"
-                                  checked={ev.completed}
-                                  onChange={() => handleToggleEventCompleted(ev.id)}
-                                  className="w-3.5 h-3.5 accent-[#bc1700] cursor-pointer"
-                                />
-                                <span className={`text-[11px] font-medium ${ev.completed ? "line-through text-neutral-400" : "text-neutral-800 dark:text-neutral-100"}`}>
-                                  {ev.title}
-                                </span>
-                              </div>
-                              <span className="font-mono text-[9px] text-neutral-400 bg-white dark:bg-neutral-700 px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-600">
-                                {ev.date}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
               </div>
             )}
 
-          </div>
-        </div>
-      )}
-
-      {/* EXPANDABLE PERSONAL EVENT CALENDAR MODAL */}
-      {showPersonalCalendarModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 text-left animate-fade-in">
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-800 max-w-5xl w-full p-4 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b pb-3 border-neutral-200 dark:border-neutral-800">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-[#bc1700]/10 text-[#bc1700] dark:text-red-400 flex items-center justify-center">
-                  <CalendarDays className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-display font-black text-sm sm:text-base text-neutral-900 dark:text-neutral-100">
-                    My Personal Event Calendar &amp; Reminders
-                  </h3>
-                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400 flex items-center gap-1 font-mono">
-                    <Lock className="w-3 h-3 text-emerald-600" /> Private to {getPreferredFirstName(currentUserName, currentUserEmail)} • Live to today’s date
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowPersonalCalendarModal(false)}
-                className="text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 p-1 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 xl:grid-cols-[1.5fr_0.9fr] gap-4">
-              <div className="bg-neutral-50 dark:bg-neutral-850 rounded-xl border border-neutral-200 dark:border-neutral-800 p-3 sm:p-4">
-                <div className="flex items-center justify-between pb-3">
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))}
-                      className="w-8 h-8 rounded-lg bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 flex items-center justify-center text-neutral-600 dark:text-neutral-300 hover:text-[#bc1700] cursor-pointer"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    <h4 className="font-sans font-black text-base text-neutral-900 dark:text-neutral-100">
-                      {calendarMonth.toLocaleString("en-US", { month: "long", year: "numeric" })}
-                    </h4>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1))}
-                    className="w-8 h-8 rounded-lg bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 flex items-center justify-center text-neutral-600 dark:text-neutral-300 hover:text-[#bc1700] cursor-pointer"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-7 gap-1.5 text-center text-[10px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
-                  {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(day => (
-                    <div key={day} className="py-2">{day}</div>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-7 gap-1.5">
-                  {Array.from({ length: 42 }).map((_, index) => {
-                    const firstDay = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1);
-                    const offset = (firstDay.getDay() + 6) % 7;
-                    const dayNumber = index - offset + 1;
-                    const thisDate = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), dayNumber);
-                    const isCurrentMonth = thisDate.getMonth() === calendarMonth.getMonth();
-                    const isToday = thisDate.toDateString() === new Date().toDateString();
-                    const iso = thisDate.toISOString().split('T')[0];
-                    const dayEvents = personalEvents.filter(ev => ev.date === iso).sort((a, b) => (a.title || '').localeCompare(b.title || ''));
-
-                    return (
-                      <button
-                        key={`${calendarMonth.getMonth()}-${index}`}
-                        type="button"
-                        onClick={() => setSelectedCalendarDate(iso)}
-                        className={`min-h-[88px] rounded-xl border p-2 text-left transition-all ${
-                          isCurrentMonth ? 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-700 hover:border-[#bc1700]/60' : 'bg-neutral-100/70 dark:bg-neutral-800/40 border-transparent text-neutral-300'
-                        } ${isToday ? 'ring-2 ring-[#bc1700] bg-[#fff7f5] dark:bg-[#2b1714]' : ''}`}
-                      >
-                        <div className={`text-[10px] font-bold ${isToday ? 'text-[#bc1700]' : 'text-neutral-700 dark:text-neutral-200'}`}>
-                          {isCurrentMonth ? thisDate.getDate() : ''}
-                        </div>
-
-                        <div className="mt-1 space-y-1">
-                          {dayEvents.slice(0, 2).map(event => (
-                            <div key={event.id} className="rounded-md bg-red-50 dark:bg-red-950/50 px-1.5 py-0.5 text-[8px] text-[#bc1700] dark:text-red-300 font-bold truncate">
-                              {event.title}
-                            </div>
-                          ))}
-                          {dayEvents.length > 2 && (
-                            <div className="text-[8px] font-bold text-neutral-500 dark:text-neutral-400">
-                              +{dayEvents.length - 2} more
-                            </div>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <form onSubmit={handleAddPersonalEvent} className="p-3 sm:p-4 bg-neutral-50 dark:bg-neutral-850 rounded-xl border border-neutral-200 dark:border-neutral-800 space-y-3">
-                  <span className="text-[11px] font-bold text-neutral-800 dark:text-neutral-200 block uppercase tracking-wider">
-                    + Add Personal Event / Reminder
-                  </span>
-                  <div className="space-y-2">
-                    <input
-                      type="text"
-                      required
-                      placeholder="Event title"
-                      value={newEventTitle}
-                      onChange={(e) => setNewEventTitle(e.target.value)}
-                      className="w-full px-3 py-1.5 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-lg text-xs outline-none focus:ring-1 focus:ring-[#bc1700]"
-                    />
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <input
-                        type="date"
-                        required
-                        value={selectedCalendarDate}
-                        onChange={(e) => setSelectedCalendarDate(e.target.value)}
-                        className="w-full px-2 py-1.5 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-lg text-xs outline-none focus:ring-1 focus:ring-[#bc1700]"
-                      />
-                      <select
-                        value={newEventCategory}
-                        onChange={(e) => setNewEventCategory(e.target.value as any)}
-                        className="w-full px-2 py-1.5 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-lg text-xs outline-none focus:ring-1 focus:ring-[#bc1700]"
-                      >
-                        <option value="Reminder">Reminder</option>
-                        <option value="Task Target">Task Target</option>
-                        <option value="Meeting">Meeting</option>
-                        <option value="Personal">Personal</option>
-                      </select>
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="Optional notes or time"
-                      value={newEventNotes}
-                      onChange={(e) => setNewEventNotes(e.target.value)}
-                      className="w-full px-3 py-1.5 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-lg text-xs outline-none"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="w-full py-2 bg-[#bc1700] hover:bg-[#8e1200] text-white font-bold rounded-lg text-xs transition-colors shadow-xs cursor-pointer"
-                  >
-                    Save Event
-                  </button>
-                </form>
-
-                <div className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 p-3 sm:p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-xs font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider">
-                      {new Date(selectedCalendarDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                    </h4>
-                    <span className="text-[9px] bg-red-50 dark:bg-red-950/60 text-[#bc1700] dark:text-red-300 px-2 py-0.5 rounded-full font-bold uppercase">
-                      {personalEvents.filter(ev => ev.date === selectedCalendarDate).length} items
-                    </span>
-                  </div>
-
-                  <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1">
-                    {personalEvents.filter(ev => ev.date === selectedCalendarDate).length === 0 ? (
-                      <div className="py-6 text-center text-neutral-400 dark:text-neutral-500 text-xs">
-                        No events on this day.
-                      </div>
-                    ) : (
-                      personalEvents
-                        .filter(ev => ev.date === selectedCalendarDate)
-                        .map(ev => (
-                          <div key={ev.id} className="p-2.5 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50 flex items-start justify-between gap-2">
-                            <div className="flex items-start gap-2">
-                              <input
-                                type="checkbox"
-                                checked={ev.completed}
-                                onChange={() => handleToggleEventCompleted(ev.id)}
-                                className="mt-0.5 w-3.5 h-3.5 accent-[#bc1700] cursor-pointer"
-                              />
-                              <div>
-                                <p className={`text-[11px] font-bold ${ev.completed ? 'line-through text-neutral-400' : 'text-neutral-900 dark:text-neutral-100'}`}>
-                                  {ev.title}
-                                </p>
-                                {ev.notes && (
-                                  <p className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-0.5">{ev.notes}</p>
-                                )}
-                              </div>
-                            </div>
-                            <button type="button" onClick={() => handleDeletePersonalEvent(ev.id)} className="text-neutral-400 hover:text-red-600 cursor-pointer">
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        ))
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-3 border-t border-neutral-200 dark:border-neutral-800 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setShowPersonalCalendarModal(false)}
-                className="px-4 py-1.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 rounded-lg text-xs font-semibold hover:bg-neutral-200 cursor-pointer"
-              >
-                Close
-              </button>
-            </div>
           </div>
         </div>
       )}
@@ -1413,6 +992,8 @@ export default function DashboardOverview({
             tasks={tasks}
             speechEnabled={speechEnabled}
             currentUserRole={currentUserRole}
+            currentUserEmail={currentUserEmail}
+            currentUserName={currentUserName}
             onUpdateEvents={onUpdateEvents}
           />
         </div>

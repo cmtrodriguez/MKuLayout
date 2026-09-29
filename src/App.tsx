@@ -19,8 +19,9 @@ import QuickAccessHub from "./components/QuickAccessHub";
 import ProfileSettings from "./components/ProfileSettings";
 import { LayoutStaffDashboard, EicDashboard } from "./components/RoleDashboards";
 import { CanvaDirectory } from "./components/CanvaDirectory";
-import { OFFICIAL_MEMBERS_MAP, getPreferredFirstName, resolveLayoutAssignee } from "./lib/memberUtils";
+import { OFFICIAL_MEMBERS_MAP, getPreferredFirstName, resolveLayoutAssignee, resolveMemberEmail, getEditorDeputyEmails } from "./lib/memberUtils";
 import { AccentTheme, applyAccentCssVars } from "./lib/accentTheme";
+import { seededUuid } from "./lib/seededUuid";
 import { supabase, fetchUserProfileByEmail, fetchTasks, fetchMembers, fetchComments, fetchCalendarEvents, fetchPolls, fetchAnnouncements, fetchNotifications, fetchIssueSheets, upsertTask, deleteTask, upsertMember, createComment, upsertCalendarEvent, deleteCalendarEvent, createPoll, updatePollOptionVotes, deletePoll, createNotification, markNotificationRead, createAnnouncement, saveIssueSheets, subscribeToLayoutRealtime } from "./lib/supabase";
 import mkuleImg from "./mkule.png";
 
@@ -53,6 +54,7 @@ export default function App() {
   const [comments, setComments] = useState<TaskComment[]>([]);
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [userProfileId, setUserProfileId] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
   // User Authentication & Role States
@@ -172,6 +174,36 @@ export default function App() {
     applyAccentCssVars(accentTheme);
   }, [accentTheme]);
 
+  // Profile id of the signed-in account; used to filter the alert feed to this
+  // account's own targeted notifications.
+  useEffect(() => {
+    if (!userEmail) {
+      setUserProfileId("");
+      return;
+    }
+    let active = true;
+    fetchUserProfileByEmail(userEmail).then((profile) => {
+      if (active) setUserProfileId(profile?.id || "");
+    });
+    return () => { active = false; };
+  }, [userEmail]);
+
+  // Tasks persisted from issue-sheet rows carry deterministic ids; re-attach the
+  // source row id after a fetch so sheet edits can still find and replace them.
+  const tagTasksWithSourceRows = (list: Task[], sheets: typeof issueSheets): Task[] => {
+    const rowIdByTaskId = new Map<string, string>();
+    sheets.forEach((sheet) => sheet.rows.forEach((row) => {
+      rowIdByTaskId.set(seededUuid(`issue-task-${row.id}`), row.id);
+      rowIdByTaskId.set(seededUuid(`online-task-${row.id}`), row.id);
+      rowIdByTaskId.set(seededUuid(`issue-pending-${row.id}`), row.id);
+    }));
+    return list.map((t) => {
+      if (t.sourceIssueRowId) return t;
+      const rowId = rowIdByTaskId.get(t.id);
+      return rowId ? { ...t, sourceIssueRowId: rowId } : t;
+    });
+  };
+
   // Modals Visibility
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -251,7 +283,7 @@ export default function App() {
         fetchIssueSheets()
       ]);
 
-      setTasks(sbTasks);
+      setTasks(tagTasksWithSourceRows(sbTasks, (sbIssueSheets && sbIssueSheets.length > 0) ? sbIssueSheets : issueSheetsRef.current));
       setMembers(sbMembers);
       setComments(sbComments);
       setEvents(sbEvents);
@@ -295,7 +327,7 @@ export default function App() {
 
     // Subscribe to realtime updates — no polling needed
     const unsubscribe = subscribeToLayoutRealtime({
-      onTasksChange: async () => { setTasks(await fetchTasks()); },
+      onTasksChange: async () => { setTasks(tagTasksWithSourceRows(await fetchTasks(), issueSheetsRef.current)); },
       onCommentsChange: async () => { setComments(await fetchComments()); },
       onCalendarChange: async () => { setEvents(await fetchCalendarEvents()); },
       onPollsChange: async () => { setPolls(await fetchPolls()); },
@@ -336,17 +368,18 @@ export default function App() {
     const prevTasks = tasksRef.current;
     tasksRef.current = newTasks;
     setTasks(newTasks);
+    persistTaskDiff(prevTasks, newTasks);
+  };
 
-    // Persist edits and deletions to Supabase so tasks survive a refresh and stay in
-    // sync across devices. Only rows with a real DB (UUID) id are written: locally
-    // derived ids (e.g. issue-sheet rows) are regenerated from their own source and
-    // would otherwise be duplicated by the id-normalising upsert.
-    const isDbId = (id?: string) =>
-      typeof id === "string" &&
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+  // Writes created/edited rows and deletes removed ones so every task with a real
+  // DB (UUID) id survives a refresh and stays in sync across devices.
+  const isDbId = (id?: string) =>
+    typeof id === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
+  const persistTaskDiff = (prevTasks: Task[], nextTasks: Task[]) => {
     const prevById = new Map(prevTasks.filter((t) => isDbId(t.id)).map((t) => [t.id, t]));
-    const newById = new Map(newTasks.filter((t) => isDbId(t.id)).map((t) => [t.id, t]));
+    const newById = new Map(nextTasks.filter((t) => isDbId(t.id)).map((t) => [t.id, t]));
 
     prevById.forEach((_, id) => {
       if (!newById.has(id)) void deleteTask(id);
@@ -362,11 +395,13 @@ export default function App() {
   // Compute the next task list from current state and persist it to the backend.
   // Used by every mutation path so no task change is lost on refresh.
   const commitTasks = (updater: Task[] | ((prev: Task[]) => Task[])) => {
+    const prevTasks = tasksRef.current;
     const nextTasks = typeof updater === "function"
-      ? (updater as (prev: Task[]) => Task[])(tasksRef.current)
+      ? (updater as (prev: Task[]) => Task[])(prevTasks)
       : updater;
     tasksRef.current = nextTasks;
     setTasks(nextTasks);
+    persistTaskDiff(prevTasks, nextTasks);
     // Realtime will reflect the change across all sessions
   };
 
@@ -630,21 +665,64 @@ export default function App() {
     const updated = [...comments, newComment];
     setComments(updated);
     createComment(newComment).catch(() => {});
+
+    // Alert only the people this comment concerns: the assigned artist when a
+    // leader reviews, or the editor/deputy desk when a staffer replies.
+    const task = tasksRef.current.find(t => t.id === taskId);
+    if (task) {
+      const isLeader = userRole === "Layout Editor" || userRole === "Layout Deputy" || userRole === "Online Layout Head";
+      const assigneeEmail = task.assigneeEmail || resolveMemberEmail(task.illusLayout);
+      if (isLeader) {
+        if (assigneeEmail && assigneeEmail.toLowerCase() !== userEmail.toLowerCase()) {
+          handleAddNotification(
+            "New Comment",
+            `The ${userRole === "Layout Deputy" ? "layout deputy" : "layout editor"} commented on '${task.title}'. Kindly check 'My Assignments'.`,
+            "info",
+            [assigneeEmail]
+          );
+        }
+      } else {
+        handleAddNotification(
+          "New Comment",
+          `${getPreferredFirstName(userName, userEmail)} commented on '${task.title}'.`,
+          "info",
+          getEditorDeputyEmails()
+        );
+      }
+    }
   };
 
-  const handleAddNotification = (title: string, message: string, type: 'info' | 'assignment' | 'deadline' | 'revision' | 'poll' | 'birthday') => {
-    const notif: Notification = {
-      id: `notif-${Date.now()}`,
-      title,
-      message,
-      type,
-      timestamp: new Date().toISOString(),
-      readBy: []
-    };
-    const nextNotifs = [notif, ...notifications];
-    setNotifications(nextNotifs);
-    createNotification(notif).catch(() => {});
+  const handleAddNotification = (
+    title: string,
+    message: string,
+    type: 'info' | 'assignment' | 'deadline' | 'revision' | 'poll' | 'birthday',
+    targetEmails?: string[]
+  ) => {
+    const targets = Array.from(new Set(
+      (targetEmails && targetEmails.length ? targetEmails : [userEmail]).filter(Boolean)
+    ));
+    const timestamp = new Date().toISOString();
+    targets.forEach((email, idx) => {
+      const notif: Notification = {
+        id: `notif-${Date.now()}-${idx}`,
+        title,
+        message,
+        type,
+        timestamp,
+        readBy: [],
+        targetEmail: email
+      };
+      if (email.toLowerCase() === userEmail.toLowerCase()) {
+        setNotifications(prev => [{ ...notif, userId: userProfileId || undefined }, ...prev]);
+      }
+      createNotification(notif).catch(() => {});
+    });
   };
+
+  // The bell feed only ever shows alerts addressed to the signed-in account.
+  const myNotifications = userProfileId
+    ? notifications.filter(n => n.userId === userProfileId)
+    : [];
 
   const updateIssueRow = (id: string, field: "page" | "section" | "title" | "writer" | "graphics" | "layout" | "online" | "progress", value: string) => {
     updateIssueSheets((prev) => prev.map((sheet) => {
@@ -736,8 +814,9 @@ export default function App() {
     const rowTitle = issueRowDraft.title?.trim() || `${issueRowDraft.section || "Issue"}${issueRowDraft.page ? ` ${issueRowDraft.page}` : ""}`.trim() || `Issue Row ${issueRowDraft.id}`;
     const layoutAssignee = issueRowDraft.layout?.trim() || "Unassigned";
     const resolved = resolveLayoutAssignee(layoutAssignee, members);
+    const pendingId = seededUuid(`issue-pending-${issueRowDraft.id}`);
     const newPendingTask: Task = {
-      id: `issue-pending-${issueRowDraft.id}`,
+      id: pendingId,
       title: rowTitle,
       typeOfRelease: "Online Article",
       typeOfContent: issueRowDraft.section || "News",
@@ -766,9 +845,9 @@ export default function App() {
 
     commitTasks((prev) => {
       const filtered = prev.filter((task) =>
-        task.id !== `issue-pending-${issueRowDraft.id}` &&
-        task.id !== `issue-task-${issueRowDraft.id}` &&
-        task.id !== `online-task-${issueRowDraft.id}` &&
+        task.id !== seededUuid(`issue-pending-${issueRowDraft.id}`) &&
+        task.id !== seededUuid(`issue-task-${issueRowDraft.id}`) &&
+        task.id !== seededUuid(`online-task-${issueRowDraft.id}`) &&
         task.sourceIssueRowId !== issueRowDraft.id
       );
       return [newPendingTask, ...filtered];
@@ -914,7 +993,7 @@ export default function App() {
     const resolvedAssignee = resolveLayoutAssignee(resolvedFormArtist, members);
     const autoCanvaLink = CANVA_LINK_BY_CATEGORY[formContentType] || "";
     const created: Task = {
-      id: `task-${Date.now()}`,
+      id: crypto.randomUUID(),
       title: formTitle,
       typeOfRelease: formReleaseType,
       typeOfContent: formContentType,
@@ -943,7 +1022,7 @@ export default function App() {
     if (formReleaseType === "Issue Article") {
       const onlineCompanion: Task = {
         ...created,
-        id: `task-${Date.now()}-online`,
+        id: crypto.randomUUID(),
         title: `${formTitle} (Online Pubmat)`,
         typeOfRelease: "Online Article",
         isPendingConfirmation: false
@@ -951,24 +1030,17 @@ export default function App() {
       nextTasks = [onlineCompanion, ...nextTasks];
     }
 
-    setTasks(nextTasks);
+    commitTasks(() => nextTasks);
 
-    // Persist tasks to Supabase
-    nextTasks.forEach(t => upsertTask(t).catch(() => {}));
-
-    // Push Notification
-    if (formArtist !== "Unassigned") {
-      const notif: Notification = {
-        id: `notif-${Date.now()}`,
-        title: "New Layout Assignment",
-        message: `You have been assigned to layout '${formTitle}' targeting ${formReleaseDate}.` + (autoCanvaLink ? ` Canva link: ${autoCanvaLink}` : ''),
-        type: "assignment",
-        timestamp: new Date().toISOString(),
-        readBy: []
-      };
-      const nextNotifs = [notif, ...notifications];
-      setNotifications(nextNotifs);
-      createNotification(notif).catch(() => {});
+    // Push Notification — targeted only at the assigned account, kept short.
+    const assigneeEmail = created.assigneeEmail;
+    if (formArtist !== "Unassigned" && assigneeEmail) {
+      handleAddNotification(
+        "New Assignment",
+        `You've been assigned '${formTitle}' (due ${formReleaseDate || "TBD"}). Check 'My Assignments'.`,
+        "assignment",
+        [assigneeEmail]
+      );
     }
 
     // Reset Form
@@ -1058,7 +1130,7 @@ export default function App() {
                   }}
                   className={`w-full px-4 py-3 rounded-2xl text-xs font-bold tracking-wide flex items-center gap-3 transition-all cursor-pointer text-left ${
                     isActive
-                      ? "bg-gradient-to-r from-[#bc1700] to-[#660000] text-white font-black shadow-lg shadow-red-950/40 border-l-4 border-white"
+                      ? "bg-gradient-to-r from-brand-maroon to-brand-maroon-dark text-white font-black shadow-lg shadow-red-950/40 border-l-4 border-white"
                       : "text-neutral-400 hover:text-white hover:bg-neutral-900/80"
                   }`}
                 >
@@ -1072,7 +1144,7 @@ export default function App() {
 
         {/* User Signature badge at the bottom of the sidebar */}
         <div className="pt-4 border-t border-neutral-900 flex items-center gap-2.5 text-left mt-4 shrink-0">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#bc1700] to-[#660000] border border-red-500/20 flex items-center justify-center text-xs font-bold text-white uppercase font-sans shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-maroon to-brand-maroon-dark border border-red-500/20 flex items-center justify-center text-xs font-bold text-white uppercase font-sans shrink-0">
             {userName.charAt(0)}
           </div>
           <div className="min-w-0 flex-1">
@@ -1180,7 +1252,7 @@ export default function App() {
                       }}
                       className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-bold tracking-wide flex items-center gap-3 transition-all text-left cursor-pointer ${
                         isActive
-                          ? "bg-gradient-to-r from-[#bc1700] to-[#660000] text-white shadow-sm"
+                          ? "bg-gradient-to-r from-brand-maroon to-brand-maroon-dark text-white shadow-sm"
                           : "text-neutral-300 hover:text-white hover:bg-neutral-900"
                       }`}
                     >
@@ -1261,7 +1333,7 @@ export default function App() {
                 aria-label="Notification center"
               >
                 <Bell className="w-4 h-4" />
-                {notifications.length > 0 && (
+                {myNotifications.length > 0 && (
                   <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-600 rounded-full animate-ping" />
                 )}
               </button>
@@ -1274,7 +1346,7 @@ export default function App() {
                   <div className="flex items-center justify-between border-b pb-1.5 border-neutral-100 dark:border-neutral-800">
                     <h3 className="font-bold text-neutral-900 dark:text-neutral-100 font-display">Alert Feed</h3>
                     <button
-                      onClick={() => setNotifications([])}
+                      onClick={() => setNotifications(prev => prev.filter(n => !(userProfileId && n.userId === userProfileId)))}
                       className="text-[10px] text-red-700 dark:text-red-400 hover:underline font-bold cursor-pointer"
                     >
                       Clear
@@ -1282,10 +1354,10 @@ export default function App() {
                   </div>
 
                   <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {notifications.length === 0 ? (
+                    {myNotifications.length === 0 ? (
                       <p className="text-neutral-400 dark:text-neutral-500 py-4 text-center">No recent alerts.</p>
                     ) : (
-                      notifications.slice(0, 4).map((n) => (
+                      myNotifications.slice(0, 4).map((n) => (
                         <div key={n.id} className="p-2 bg-neutral-50 dark:bg-neutral-800 rounded-xl border border-neutral-100 dark:border-neutral-700">
                           <h4 className="font-semibold text-neutral-800 dark:text-neutral-200">{n.title}</h4>
                           <p className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-0.5 leading-normal">{n.message}</p>
@@ -1375,7 +1447,7 @@ export default function App() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-neutral-100 dark:border-neutral-800">
                   <div>
                     <h3 className="font-sans font-black text-neutral-900 dark:text-neutral-100 text-base sm:text-lg flex items-center gap-2">
-                      <BookOpen className="w-4 h-4 text-[#bc1700]" />
+                      <BookOpen className="w-4 h-4 text-brand-maroon" />
                       Issue Pages
                     </h3>
                     <p className="text-[10px] sm:text-xs text-neutral-500 dark:text-neutral-400">
@@ -1394,7 +1466,7 @@ export default function App() {
                     <button
                       type="button"
                       onClick={addIssueRow}
-                      className="px-3 py-1.5 bg-[#bc1700] hover:bg-[#8e1200] text-white text-[10px] sm:text-xs font-bold rounded-xl cursor-pointer"
+                      className="px-3 py-1.5 bg-brand-maroon hover:bg-brand-maroon-dark text-white text-[10px] sm:text-xs font-bold rounded-xl cursor-pointer"
                     >
                       + Add Row
                     </button>
@@ -1410,7 +1482,7 @@ export default function App() {
                           onClick={() => setCurrentIssueSheetId(sheet.id)}
                           className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${
                             sheet.id === currentIssueSheetId
-                              ? "bg-[#bc1700] text-white border-[#bc1700]"
+                              ? "bg-brand-maroon text-white border-brand-maroon"
                               : "bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-200 border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800"
                           }`}
                         >
@@ -1444,7 +1516,7 @@ export default function App() {
 
                 <div className="overflow-x-auto rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800">
                   <div className="min-w-[920px]">
-                    <div className="grid grid-cols-[0.8fr_1.6fr_2.3fr_1.3fr_1.1fr_1.1fr_1.1fr_1.1fr] bg-[#bc1700] text-white text-[10px] font-black uppercase tracking-[0.12em]">
+                    <div className="grid grid-cols-[0.8fr_1.6fr_2.3fr_1.3fr_1.1fr_1.1fr_1.1fr_1.1fr] bg-brand-maroon text-white text-[10px] font-black uppercase tracking-[0.12em]">
                       <div className="px-2 py-2 border-r border-red-900/60">Page</div>
                       <div className="px-2 py-2 border-r border-red-900/60">Section or Content</div>
                       <div className="px-2 py-2 border-r border-red-900/60">Title or Summary</div>
@@ -1536,7 +1608,7 @@ export default function App() {
                       <h4 className="font-sans font-black text-neutral-900 dark:text-neutral-100 text-sm">Issue Tasks</h4>
                       <p className="text-[10px] text-neutral-500 dark:text-neutral-400">Issue-only tasks that are dispatched from the publication planner and assigned to the layout team.</p>
                     </div>
-                    <span className="text-[10px] font-bold bg-[#bc1700]/10 text-[#bc1700] dark:text-red-400 px-2 py-1 rounded-full">
+                    <span className="text-[10px] font-bold bg-brand-maroon/10 text-brand-maroon dark:text-brand-maroon-light px-2 py-1 rounded-full">
                       {issueTaskCards.length} task{issueTaskCards.length === 1 ? "" : "s"}
                     </span>
                   </div>
@@ -1554,7 +1626,7 @@ export default function App() {
                         >
                           <div className="space-y-2 sm:space-y-3">
                             <div className="flex items-center justify-between">
-                              <span className="text-[9px] sm:text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-[#bc1700]/5 dark:bg-[#bc1700]/20 text-[#bc1700] dark:text-red-400 border border-[#bc1700]/10 dark:border-[#bc1700]/30">
+                              <span className="text-[9px] sm:text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-brand-maroon/5 dark:bg-brand-maroon/20 text-brand-maroon dark:text-brand-maroon-light border border-brand-maroon/10 dark:border-brand-maroon/30">
                                 {task.typeOfRelease || "Issue Article"}
                               </span>
                               <span className={`text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded ${
@@ -1569,7 +1641,7 @@ export default function App() {
 
                             <div>
                               <h4
-                                className="font-bold text-gray-950 dark:text-neutral-100 text-xs sm:text-sm leading-snug hover:text-[#bc1700] dark:hover:text-red-400 cursor-pointer transition-all"
+                                className="font-bold text-gray-950 dark:text-neutral-100 text-xs sm:text-sm leading-snug hover:text-brand-maroon dark:hover:text-red-400 cursor-pointer transition-all"
                                 onClick={() => setSelectedTask(task)}
                               >
                                 {task.title}
@@ -1601,7 +1673,7 @@ export default function App() {
                               <div>
                                 <span className="text-[9px] sm:text-[10px] text-gray-400 dark:text-neutral-400 uppercase font-semibold block">Layout Artist</span>
                                 <span className="font-bold text-gray-700 dark:text-neutral-200 truncate block flex items-center gap-1">
-                                  <User className="w-3 h-3 text-[#bc1700] dark:text-red-400 shrink-0" />
+                                  <User className="w-3 h-3 text-brand-maroon dark:text-brand-maroon-light shrink-0" />
                                   <span className="truncate">{task.illusLayout || "Unassigned"}</span>
                                 </span>
                               </div>
@@ -1614,7 +1686,7 @@ export default function App() {
                               <select
                                 value={task.progress}
                                 onChange={(e) => handleUpdateTasks(tasks.map(t => t.id === task.id ? { ...t, progress: e.target.value as Task["progress"], lastUpdated: new Date().toISOString() } : t))}
-                                className="px-2 sm:px-2.5 py-1 border border-gray-200 dark:border-neutral-700 rounded-lg text-[11px] sm:text-xs outline-none cursor-pointer bg-white dark:bg-neutral-800 text-gray-700 dark:text-neutral-200 focus:ring-2 focus:ring-[#bc1700]"
+                                className="px-2 sm:px-2.5 py-1 border border-gray-200 dark:border-neutral-700 rounded-lg text-[11px] sm:text-xs outline-none cursor-pointer bg-white dark:bg-neutral-800 text-gray-700 dark:text-neutral-200 focus:ring-2 focus:ring-brand-maroon"
                               >
                                 <option value="Not Started">Not Started</option>
                                 <option value="Assigned">Assigned</option>
@@ -1628,7 +1700,7 @@ export default function App() {
                             <button
                               type="button"
                               onClick={() => setSelectedTask(task)}
-                              className="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-neutral-50 dark:bg-neutral-800 hover:bg-[#bc1700] dark:hover:bg-[#bc1700] text-[#bc1700] dark:text-red-300 hover:text-white dark:hover:text-white border border-[#bc1700]/20 dark:border-neutral-700 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
+                              className="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-neutral-50 dark:bg-neutral-800 hover:bg-brand-maroon dark:hover:bg-brand-maroon text-brand-maroon dark:text-brand-maroon-light hover:text-white dark:hover:text-white border border-brand-maroon/20 dark:border-neutral-700 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
                             >
                               Workspace <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                             </button>
@@ -1805,7 +1877,7 @@ export default function App() {
 
           <div className="flex justify-end gap-2 mt-5">
             <button type="button" onClick={() => { setEditingIssueRowId(null); setIssueRowDraft(null); }} className="px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-200 font-semibold cursor-pointer">Cancel</button>
-            <button type="button" onClick={saveIssueRowEditor} className="px-3 py-2 rounded-xl bg-[#bc1700] text-white font-bold cursor-pointer">Save Row</button>
+            <button type="button" onClick={saveIssueRowEditor} className="px-3 py-2 rounded-xl bg-brand-maroon text-white font-bold cursor-pointer">Save Row</button>
           </div>
         </div>
       </div>
@@ -1818,7 +1890,7 @@ export default function App() {
           
           <div className="flex items-center justify-between border-b border-gray-100 dark:border-neutral-800 pb-2.5">
             <div className="flex items-center gap-2">
-              <div className="p-1.5 bg-brand-maroon/10 text-brand-maroon dark:text-red-400 rounded-lg">
+              <div className="p-1.5 bg-brand-maroon/10 text-brand-maroon dark:text-brand-maroon-light rounded-lg">
                 <Plus className="w-4 h-4" />
               </div>
               <div>
@@ -1826,7 +1898,7 @@ export default function App() {
                   {taskFormOrigin === "online-pubmat" ? "Assign Online Pubmat Task" : "Assign Design Task"}
                 </h3>
                 {taskFormOrigin === "online-pubmat" && (
-                  <span className="text-[10px] text-brand-maroon dark:text-red-400 font-semibold">
+                  <span className="text-[10px] text-brand-maroon dark:text-brand-maroon-light font-semibold">
                     Online Pubmat Workflow
                   </span>
                 )}
@@ -1945,7 +2017,7 @@ export default function App() {
                 <label className="text-neutral-600 dark:text-neutral-300 font-semibold block mb-1 flex items-center justify-between">
                   <span>Release Target Date</span>
                   {formReleaseDate && (
-                    <span className="text-[10px] font-mono text-[#bc1700] dark:text-red-400 font-bold truncate max-w-[120px]">
+                    <span className="text-[10px] font-mono text-brand-maroon dark:text-brand-maroon-light font-bold truncate max-w-[120px]">
                       {formReleaseDate}
                     </span>
                   )}
@@ -1974,7 +2046,7 @@ export default function App() {
             <div className="bg-brand-cream/35 dark:bg-neutral-800/60 p-3 rounded-2xl border border-brand-maroon/20 dark:border-brand-maroon/30 space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-gray-900 dark:text-neutral-100 font-bold flex items-center gap-1.5 text-xs">
-                  <FileText className="w-4 h-4 text-brand-maroon dark:text-red-400" />
+                  <FileText className="w-4 h-4 text-brand-maroon dark:text-brand-maroon-light" />
                   <span>Document Link (ArtX / Writeup)</span>
                 </label>
               </div>
@@ -2006,7 +2078,7 @@ export default function App() {
 
           <button
             onClick={handleCreateAssignment}
-            className="w-full py-2.5 bg-red-700 hover:bg-red-600 text-white font-bold rounded-xl cursor-pointer transition-all shadow-md"
+            className="w-full py-2.5 bg-gradient-to-r from-brand-maroon to-brand-maroon-dark hover:opacity-95 text-white font-bold rounded-xl cursor-pointer transition-all shadow-[var(--brand-shadow-med)]"
           >
             Issue Layout Assignment Card
           </button>
@@ -2029,16 +2101,18 @@ export default function App() {
           setSelectedTask(updatedTask);
           let updatedList = tasks.map(t => t.id === updatedTask.id ? updatedTask : t);
 
-          // If updating an Issue Article or its online companion, keep both in sync
-          if (updatedTask.typeOfRelease === "Issue Article" || updatedTask.id.endsWith("-online") || updatedTask.title.includes("(Online Pubmat)")) {
-            const baseTitle = updatedTask.title.replace(/\s*\(Online Pubmat\)$/i, "").trim();
-            const isOnline = updatedTask.id.endsWith("-online") || updatedTask.typeOfRelease === "Online Article";
-            
+          // Keep an Issue Article and its Online Pubmat companion in sync. Companions
+          // are matched by base title + type (ids are now UUIDs, not derivable suffixes).
+          const stripPubmat = (t: string) => t.replace(/\s*\(Online Pubmat\)$/i, "").trim();
+          const updatedBase = stripPubmat(updatedTask.title);
+          const updatedIsOnline =
+            updatedTask.typeOfRelease === "Online Article" || updatedTask.title.includes("(Online Pubmat)");
+
+          if (updatedTask.typeOfRelease === "Issue Article" || updatedIsOnline) {
             const companionIndex = updatedList.findIndex(
-              t => (t.id !== updatedTask.id) && (
-                t.id === (isOnline ? updatedTask.id.replace(/-online$/, "") : `${updatedTask.id}-online`) ||
-                t.title.replace(/\s*\(Online Pubmat\)$/i, "").trim() === baseTitle
-              )
+              t => t.id !== updatedTask.id &&
+                t.typeOfRelease === (updatedIsOnline ? "Issue Article" : "Online Article") &&
+                stripPubmat(t.title) === updatedBase
             );
 
             if (companionIndex !== -1) {
@@ -2057,8 +2131,8 @@ export default function App() {
               // Create online companion if missing
               const onlineTask: Task = {
                 ...updatedTask,
-                id: `${updatedTask.id}-online`,
-                title: `${baseTitle} (Online Pubmat)`,
+                id: crypto.randomUUID(),
+                title: `${updatedBase} (Online Pubmat)`,
                 typeOfRelease: "Online Article",
                 isPendingConfirmation: false
               };

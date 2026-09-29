@@ -1,6 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
 @import "tailwindcss";
 
+/* The app toggles a `.dark` class on <html>; without this variant declaration every
+   `dark:` utility in the codebase would stay bound to the OS media query instead. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: "Arial", "Helvetica Neue", "Helvetica", "Inter", sans-serif;
   --font-display: "Arial", "Helvetica Neue", "Helvetica", "Inter", sans-serif;
@@ -11,6 +15,11 @@
   --color-brand-maroon-light: #e61c00;
   --color-brand-red: #bc1700;
   --color-brand-cream: #faf9f6;
+
+  /* Accent-tinted glows; overridden at runtime by applyAccentCssVars(). */
+  --brand-shadow-soft: 0 24px 70px rgba(188, 23, 0, 0.06);
+  --brand-shadow-med: 0 8px 20px rgba(188, 23, 0, 0.15);
+  --brand-shadow-strong: 0 8px 25px rgba(188, 23, 0, 0.2);
 }
 
 /* Base custom styles */
@@ -74,11 +83,11 @@ img, svg {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(188, 23, 0, 0.15);
+  background: color-mix(in srgb, var(--color-brand-maroon) 18%, transparent);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(188, 23, 0, 0.3);
+  background: color-mix(in srgb, var(--color-brand-maroon) 34%, transparent);
 }
 
 /* Accessbility: High Contrast Mode */
@@ -329,6 +338,63 @@ html.dark tr,
 html.dark th,
 html.dark td {
   border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Opacity-variant light surfaces (exact-class rules above don't match these) */
+html.dark .bg-white\/50,
+html.dark .bg-white\/60,
+html.dark .bg-white\/70,
+html.dark .bg-white\/80,
+html.dark .bg-gray-50\/40,
+html.dark .bg-gray-50\/50,
+html.dark .bg-gray-50\/60,
+html.dark .bg-gray-50\/80,
+html.dark .bg-gray-100\/50,
+html.dark .bg-gray-100\/60,
+html.dark .bg-gray-100\/80,
+html.dark .bg-gray-200\/50,
+html.dark .bg-gray-200\/60,
+html.dark .bg-gray-200\/70,
+html.dark .bg-neutral-50\/50,
+html.dark .bg-neutral-100\/60,
+html.dark .bg-neutral-100\/70,
+html.dark .bg-neutral-200\/60,
+html.dark .bg-neutral-200\/70,
+html.dark .bg-stone-50\/50,
+html.dark .bg-stone-100\/60 {
+  background-color: #241e1e !important;
+}
+
+/* Pastel status surfaces adapt to tinted dark panels */
+html.dark .bg-red-50, html.dark .bg-red-50\/80, html.dark .bg-red-50\/60, html.dark .bg-red-100 { background-color: #3a1512 !important; }
+html.dark .bg-blue-50, html.dark .bg-blue-100 { background-color: #12203a !important; }
+html.dark .bg-green-50, html.dark .bg-green-100, html.dark .bg-emerald-50, html.dark .bg-emerald-50\/80, html.dark .bg-emerald-100 { background-color: #10281e !important; }
+html.dark .bg-cyan-50, html.dark .bg-cyan-100 { background-color: #0e2a30 !important; }
+html.dark .bg-amber-50, html.dark .bg-amber-100 { background-color: #33240e !important; }
+html.dark .bg-purple-50, html.dark .bg-purple-100 { background-color: #251238 !important; }
+html.dark .bg-rose-50, html.dark .bg-rose-100 { background-color: #38121f !important; }
+
+/* Pastel text on those surfaces becomes light tinted text */
+html.dark .text-red-600, html.dark .text-red-700, html.dark .text-red-800 { color: #fca5a5 !important; }
+html.dark .text-blue-600, html.dark .text-blue-700 { color: #93c5fd !important; }
+html.dark .text-green-600, html.dark .text-green-700 { color: #86efac !important; }
+html.dark .text-emerald-600, html.dark .text-emerald-700, html.dark .text-emerald-900 { color: #6ee7b7 !important; }
+html.dark .text-cyan-700, html.dark .text-cyan-900 { color: #67e8f9 !important; }
+html.dark .text-amber-700, html.dark .text-amber-950 { color: #fcd34d !important; }
+html.dark .text-purple-700 { color: #d8b4fe !important; }
+html.dark .text-rose-700 { color: #fda4af !important; }
+html.dark .text-\[\#bc1700\] { color: #fca5a5 !important; }
+
+/* Pastel borders fade into the dark canvas */
+html.dark .border-red-100, html.dark .border-red-200, html.dark .border-red-200\/80, html.dark .border-red-200\/90,
+html.dark .border-blue-100, html.dark .border-blue-200,
+html.dark .border-green-100, html.dark .border-green-200,
+html.dark .border-emerald-100, html.dark .border-emerald-200, html.dark .border-emerald-200\/80,
+html.dark .border-cyan-200\/80,
+html.dark .border-amber-200\/80,
+html.dark .border-purple-200, html.dark .border-purple-200\/80,
+html.dark .border-rose-200, html.dark .border-rose-200\/80 {
+  border-color: rgba(255, 255, 255, 0.14) !important;
 }
 
 /* ==========================================================================

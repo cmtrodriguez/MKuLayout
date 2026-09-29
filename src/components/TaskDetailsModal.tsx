@@ -130,7 +130,7 @@ export default function TaskDetailsModal({
           {/* Header */}
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1 min-w-0 flex-1">
-              <span className="text-[10px] font-bold text-brand-maroon dark:text-red-400 uppercase tracking-wider block truncate">
+              <span className="text-[10px] font-bold text-brand-maroon dark:text-brand-maroon-light uppercase tracking-wider block truncate">
                 {task.typeOfRelease} • {task.typeOfContent}
               </span>
               <h2 className="text-lg sm:text-xl font-display font-black text-gray-900 dark:text-neutral-100 leading-tight">
@@ -371,7 +371,7 @@ export default function TaskDetailsModal({
           
           <div className="space-y-3 sm:space-y-4 flex-1 flex flex-col overflow-hidden">
             <h3 className="font-display font-bold text-gray-900 dark:text-neutral-100 text-sm flex items-center gap-1.5 border-b border-gray-200 dark:border-neutral-700 pb-2">
-              <MessageSquare className="w-4 h-4 text-brand-maroon dark:text-red-400" />
+              <MessageSquare className="w-4 h-4 text-brand-maroon dark:text-brand-maroon-light" />
               Design-Desk Comments {canViewThisTaskComments ? `(${taskComments.length})` : "(Restricted)"}
             </h3>
 

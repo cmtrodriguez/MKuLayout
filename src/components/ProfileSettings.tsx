@@ -8,6 +8,7 @@ import {
 import { TeamMember, UserRole, normalizeEmail } from "../types";
 import { OFFICIAL_ACCOUNTS } from "./LoginPage";
 import { OFFICIAL_MEMBERS_MAP, getOfficialFullName, getPreferredFirstName } from "../lib/memberUtils";
+import { AccentTheme, ACCENT_OPTIONS } from "../lib/accentTheme";
 
 interface ProfileSettingsProps {
   currentUserRole: UserRole;
@@ -23,8 +24,8 @@ interface ProfileSettingsProps {
   setHighContrast: (v: boolean) => void;
   darkMode?: boolean;
   setDarkMode?: (v: boolean) => void;
-  accentTheme?: "maroon" | "navy" | "forest" | "grape";
-  setAccentTheme?: (v: "maroon" | "navy" | "forest" | "grape") => void;
+  accentTheme?: AccentTheme;
+  setAccentTheme?: (v: AccentTheme) => void;
   dyslexicFont?: boolean;
   setDyslexicFont?: (v: boolean) => void;
   onLogout: () => void;
@@ -98,6 +99,9 @@ export default function ProfileSettings({
 
   const completedWork = memberTasks.filter((task: any) => task.progress === "Completed" || task.progress === "Approved").length;
   const activeWork = memberTasks.filter((task: any) => task.progress !== "Completed" && task.progress !== "Approved" && task.progress !== "Archived" && task.progress !== "Shelved").length;
+  const archivedTasks = memberTasks
+    .filter((task: any) => task.progress === "Completed" || task.progress === "Approved")
+    .sort((a: any, b: any) => String(b.lastUpdated || "").localeCompare(String(a.lastUpdated || "")));
 
   const monthCounts = monthOrder.map((month) => {
     const count = memberTasks.filter((task: any) => {
@@ -124,7 +128,7 @@ export default function ProfileSettings({
     window.speechSynthesis.speak(utterance);
   };
 
-  const handleAccentChange = (color: "maroon" | "navy" | "forest" | "grape") => {
+  const handleAccentChange = (color: AccentTheme) => {
     if (setAccentTheme) {
       setAccentTheme(color);
     }
@@ -142,7 +146,8 @@ export default function ProfileSettings({
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-left">
+    <div className="space-y-6 text-left">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       
       {/* Profile Card and Bio */}
       <div className="space-y-4 sm:space-y-6">
@@ -150,7 +155,7 @@ export default function ProfileSettings({
           <div className="absolute top-0 inset-x-0 h-2 bg-brand-maroon" />
           
           <div className="w-16 h-16 sm:w-20 sm:h-20 bg-brand-maroon/5 dark:bg-brand-maroon/20 rounded-full flex items-center justify-center mx-auto border-2 border-brand-maroon/20">
-            <User className="w-8 h-8 sm:w-10 sm:h-10 text-brand-maroon dark:text-red-400" />
+            <User className="w-8 h-8 sm:w-10 sm:h-10 text-brand-maroon dark:text-brand-maroon-light" />
           </div>
 
           <div>
@@ -161,7 +166,7 @@ export default function ProfileSettings({
           </div>
 
           <div className="flex justify-center gap-1.5 flex-wrap">
-            <span className="px-2.5 py-0.5 bg-brand-maroon/5 dark:bg-brand-maroon/20 text-brand-maroon dark:text-red-400 border border-brand-maroon/15 dark:border-brand-maroon/40 text-[10px] font-bold uppercase rounded-full">
+            <span className="px-2.5 py-0.5 bg-brand-maroon/5 dark:bg-brand-maroon/20 text-brand-maroon dark:text-brand-maroon-light border border-brand-maroon/15 dark:border-brand-maroon/40 text-[10px] font-bold uppercase rounded-full">
               {currentUserRole}
             </span>
             <span className="px-2.5 py-0.5 bg-gray-50 dark:bg-neutral-800 text-gray-500 dark:text-neutral-400 border border-gray-100 dark:border-neutral-700 text-[10px] font-bold uppercase rounded-full">
@@ -194,7 +199,7 @@ export default function ProfileSettings({
         {/* Official Account Details & Security Credentials Card */}
         <div className="glass-card rounded-2xl p-4 sm:p-5 space-y-3 bg-white dark:bg-neutral-900 border border-gray-100 dark:border-neutral-800 shadow-sm">
           <div className="flex items-center justify-between border-b pb-2 border-gray-100 dark:border-neutral-800">
-            <div className="flex items-center gap-2 text-brand-maroon dark:text-red-400">
+            <div className="flex items-center gap-2 text-brand-maroon dark:text-brand-maroon-light">
               <ShieldCheck className="w-4 h-4" />
               <h4 className="font-bold text-xs text-gray-900 dark:text-neutral-100">
                 Official Account Details
@@ -352,7 +357,7 @@ export default function ProfileSettings({
 
         {/* Workspace Google Drive Integration Card */}
         <div className="glass-card rounded-2xl p-4 sm:p-5 space-y-2.5 bg-white dark:bg-neutral-900 border border-gray-100 dark:border-neutral-800 shadow-sm">
-          <div className="flex items-center gap-2 text-brand-maroon dark:text-red-400">
+          <div className="flex items-center gap-2 text-brand-maroon dark:text-brand-maroon-light">
             <FolderOpen className="w-4 h-4" />
             <h4 className="font-bold text-xs text-gray-900 dark:text-neutral-100">MKule '26-'27 Layout Drive</h4>
           </div>
@@ -376,12 +381,12 @@ export default function ProfileSettings({
           
           <div className="flex items-center justify-between border-b pb-3 border-gray-100 dark:border-neutral-800">
             <div className="flex items-center gap-2">
-              <Settings className="w-5 h-5 text-brand-maroon dark:text-red-400" />
+              <Settings className="w-5 h-5 text-brand-maroon dark:text-brand-maroon-light" />
               <h3 className="font-display font-bold text-gray-950 dark:text-neutral-100 text-base">Workspace Configuration</h3>
             </div>
             <button
               onClick={handleResetDefaults}
-              className="text-[11px] text-brand-maroon dark:text-red-400 hover:underline flex items-center gap-1 font-semibold cursor-pointer"
+              className="text-[11px] text-brand-maroon dark:text-brand-maroon-light hover:underline flex items-center gap-1 font-semibold cursor-pointer"
               title="Reset all settings to default"
             >
               <RefreshCw className="w-3 h-3" /> Reset Defaults
@@ -392,7 +397,7 @@ export default function ProfileSettings({
             <div className="rounded-2xl border border-gray-200 dark:border-neutral-700 bg-gradient-to-br from-gray-50 via-white to-red-50 dark:from-neutral-800 dark:via-neutral-900 dark:to-red-950/30 p-4 space-y-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <div className="flex items-center gap-2 text-brand-maroon dark:text-red-400">
+                  <div className="flex items-center gap-2 text-brand-maroon dark:text-brand-maroon-light">
                     <Award className="w-4 h-4" />
                     <h4 className="font-bold text-xs text-gray-900 dark:text-neutral-100">Workload Tracker</h4>
                   </div>
@@ -428,7 +433,7 @@ export default function ProfileSettings({
                   </div>
                   <div className="rounded-xl border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-2.5">
                     <div className="text-[9px] uppercase text-gray-400 dark:text-neutral-500">Active</div>
-                    <div className="font-black text-base text-brand-maroon dark:text-red-400">{activeWork}</div>
+                    <div className="font-black text-base text-brand-maroon dark:text-brand-maroon-light">{activeWork}</div>
                   </div>
                 </div>
               ) : (
@@ -450,11 +455,11 @@ export default function ProfileSettings({
                     {monthCounts.map(({ month, count }) => {
                       const width = Math.max(count * 18, count > 0 ? 16 : 4);
                       return (
-                        <div key={month} className={`flex items-center gap-2 text-[10px] ${selectedMonth === month ? "text-brand-maroon dark:text-red-400" : "text-gray-600 dark:text-neutral-300"}`}>
+                        <div key={month} className={`flex items-center gap-2 text-[10px] ${selectedMonth === month ? "text-brand-maroon dark:text-brand-maroon-light" : "text-gray-600 dark:text-neutral-300"}`}>
                           <span className="w-12 shrink-0">{month.slice(0, 3)}</span>
                           <div className="h-2.5 flex-1 rounded-full bg-gray-200 dark:bg-neutral-700 overflow-hidden">
                             <div
-                              className={`h-full rounded-full ${count > 0 ? "bg-gradient-to-r from-[#bc1700] to-[#f59e0b]" : "bg-gray-200 dark:bg-neutral-700"}`}
+                              className={`h-full rounded-full ${count > 0 ? "bg-gradient-to-r from-brand-maroon to-brand-maroon-light" : "bg-gray-200 dark:bg-neutral-700"}`}
                               style={{ width: `${Math.min(width, 100)}%` }}
                             />
                           </div>
@@ -505,7 +510,7 @@ export default function ProfileSettings({
                   }}
                   className={`p-3 rounded-xl border flex items-center gap-2.5 transition-all text-left cursor-pointer ${
                     darkMode 
-                      ? "border-brand-maroon bg-brand-maroon/15 dark:bg-brand-maroon/30 text-brand-maroon-light dark:text-red-300 font-bold shadow-xs ring-1 ring-brand-maroon/30" 
+                      ? "border-brand-maroon bg-brand-maroon/15 dark:bg-brand-maroon/30 text-brand-maroon-light dark:text-brand-maroon-light font-bold shadow-xs ring-1 ring-brand-maroon/30" 
                       : "border-gray-200 dark:border-neutral-750 hover:bg-gray-50 dark:hover:bg-neutral-800 text-gray-600 dark:text-neutral-400"
                   }`}
                 >
@@ -521,25 +526,20 @@ export default function ProfileSettings({
             {/* Visual themes */}
             <div className="space-y-2 border-t pt-4 border-gray-100 dark:border-neutral-800">
               <label className="font-semibold text-gray-700 dark:text-neutral-200 flex items-center gap-2">
-                <Palette className="w-4 h-4 text-brand-maroon dark:text-red-400" /> Brand Accent Color
+                <Palette className="w-4 h-4 text-brand-maroon dark:text-brand-maroon-light" /> Brand Accent Color
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {[
-                  { id: "maroon", label: "UP Maroon", colorClass: "bg-[#bc1700]" },
-                  { id: "navy", label: "Royal Navy", colorClass: "bg-[#1E3A8A]" },
-                  { id: "forest", label: "Forest Green", colorClass: "bg-[#065F46]" },
-                  { id: "grape", label: "Grape Purple", colorClass: "bg-[#581C87]" }
-                ].map(item => (
+                {ACCENT_OPTIONS.map(item => (
                   <button
                     key={item.id}
-                    onClick={() => handleAccentChange(item.id as any)}
+                    onClick={() => handleAccentChange(item.id)}
                     className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-all cursor-pointer ${
                       accentTheme === item.id 
-                        ? "border-brand-maroon bg-brand-cream/30 dark:bg-brand-maroon/20 text-brand-maroon-dark dark:text-red-300 font-bold ring-1 ring-brand-maroon/30" 
-                        : "border-gray-100 dark:border-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-850 text-gray-500 dark:text-neutral-400"
+                        ? "border-brand-maroon bg-brand-cream/30 dark:bg-brand-maroon/20 text-brand-maroon-dark dark:text-brand-maroon-light font-bold ring-1 ring-brand-maroon/30" 
+                        : "border-gray-100 dark:border-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-800 text-gray-500 dark:text-neutral-400"
                     }`}
                   >
-                    <span className={`w-3 h-3 rounded-full ${item.colorClass} shrink-0`} />
+                    <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
                     <span className="truncate">{item.label}</span>
                   </button>
                 ))}
@@ -550,7 +550,42 @@ export default function ProfileSettings({
 
         </div>
       </div>
+      </div>
 
+      {/* Task Archive: accomplished layouts, scrollable history */}
+      <div className="glass-card rounded-2xl p-4 sm:p-5 bg-white dark:bg-neutral-900 border border-gray-100 dark:border-neutral-800 shadow-sm space-y-3">
+        <div className="flex items-center justify-between border-b border-gray-100 dark:border-neutral-800 pb-2">
+          <div className="flex items-center gap-2 text-brand-maroon dark:text-brand-maroon-light">
+            <FolderOpen className="w-4 h-4" />
+            <h4 className="font-bold text-xs text-gray-900 dark:text-neutral-100">Task Archive</h4>
+          </div>
+          <span className="text-[10px] font-mono font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 px-2 py-0.5 rounded-full">
+            {archivedTasks.length} accomplished
+          </span>
+        </div>
+
+        {archivedTasks.length === 0 ? (
+          <p className="text-[11px] text-gray-400 dark:text-neutral-500 py-3 text-center">
+            No accomplished tasks yet. Layouts approved by the Layout Editor will be archived here.
+          </p>
+        ) : (
+          <div className="max-h-56 overflow-y-auto pr-1 space-y-1.5">
+            {archivedTasks.map((task: any) => (
+              <div key={task.id} className="flex items-center justify-between gap-2 p-2 bg-neutral-50 dark:bg-neutral-800/60 border border-gray-100 dark:border-neutral-700 rounded-lg text-[11px]">
+                <div className="min-w-0">
+                  <p className="font-bold text-gray-800 dark:text-neutral-200 truncate">{task.title}</p>
+                  <p className="text-[10px] text-gray-400 dark:text-neutral-500 truncate">
+                    {task.typeOfRelease} • {task.typeOfContent} • Target: {task.releaseDate || "—"}
+                  </p>
+                </div>
+                <span className="shrink-0 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[9px] font-bold uppercase">
+                  {task.progress}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

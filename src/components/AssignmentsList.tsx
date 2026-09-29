@@ -13,6 +13,7 @@ import { shareGoogleDocWithMember } from "../lib/googleDriveShare";
 import { fetchGoogleDocTitle, extractDocInputDetails } from "../lib/googleDocTitle";
 
 import { OFFICIAL_MEMBERS_MAP, getOfficialDisplayName, getPreferredFirstName, resolveLayoutAssignee } from "../lib/memberUtils";
+import { seededUuid } from "../lib/seededUuid";
 
 interface AssignmentsListProps {
   tasks: Task[];
@@ -143,8 +144,14 @@ export default function AssignmentsList({
 
     if (fromIssueSheet) {
       const baseTitle = finalData.title.replace(/\s*\(Online Pubmat\)$/i, "").trim();
-      const issueTaskId = sourceRowId ? `issue-task-${sourceRowId}` : (task.typeOfRelease === "Issue Article" ? task.id : `${task.id.replace(/-online$/, "")}`);
-      const onlineTaskId = sourceRowId ? `online-task-${sourceRowId}` : `${issueTaskId}-online`;
+      // UUID-shaped ids (seeded from the source row) so the dual tasks persist and
+      // can be re-derived after a refresh. Fall back to fresh UUIDs for manual rows.
+      const issueTaskId = sourceRowId
+        ? seededUuid(`issue-task-${sourceRowId}`)
+        : (task.typeOfRelease === "Issue Article" ? task.id : crypto.randomUUID());
+      const onlineTaskId = sourceRowId
+        ? seededUuid(`online-task-${sourceRowId}`)
+        : crypto.randomUUID();
 
       const sharedFields: Partial<Task> = {
         ...finalData,
@@ -178,8 +185,7 @@ export default function AssignmentsList({
         t.id !== task.id &&
         t.id !== issueTaskId &&
         t.id !== onlineTaskId &&
-        t.id !== `${task.id}-online` &&
-        t.id !== `issue-pending-${sourceRowId || ""}` &&
+        (sourceRowId ? t.id !== seededUuid(`issue-pending-${sourceRowId}`) : true) &&
         !(sourceRowId && t.sourceIssueRowId === sourceRowId)
       );
       updated = [issueTask, onlineTask, ...updated];
@@ -392,7 +398,7 @@ export default function AssignmentsList({
         <div className="bg-brand-cream/25 dark:bg-neutral-900/60 border-2 border-brand-maroon/20 dark:border-brand-maroon/40 rounded-xl sm:rounded-2xl p-3 sm:p-6 text-left space-y-2.5 sm:space-y-4 shadow-sm">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3 border-b border-brand-maroon/10 dark:border-brand-maroon/20 pb-2 sm:pb-3">
             <div className="flex items-center gap-1.5 sm:gap-2">
-              <div className="p-1.5 sm:p-2 bg-brand-maroon/10 text-brand-maroon dark:text-red-400 rounded-lg sm:rounded-xl">
+              <div className="p-1.5 sm:p-2 bg-brand-maroon/10 text-brand-maroon dark:text-brand-maroon-light rounded-lg sm:rounded-xl">
                 <FileSpreadsheet className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" />
               </div>
               <div>
@@ -615,7 +621,7 @@ export default function AssignmentsList({
                           <label className="font-bold text-gray-700 dark:text-neutral-300 block flex items-center justify-between">
                             <span>ArtX Document Link</span>
                             {isFetchingDocTitle && (
-                              <span className="text-[10px] text-brand-maroon dark:text-red-400 font-semibold animate-pulse">Auto-fetching title...</span>
+                              <span className="text-[10px] text-brand-maroon dark:text-brand-maroon-light font-semibold animate-pulse">Auto-fetching title...</span>
                             )}
                           </label>
                           <input
@@ -741,7 +747,7 @@ export default function AssignmentsList({
                     <div className="flex flex-col md:flex-row justify-between gap-3 sm:gap-5 text-xs text-left">
                       <div className="space-y-2 sm:space-y-3 flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                          <span className="text-[8px] sm:text-[9px] font-bold uppercase px-1.5 sm:px-2 py-0.5 rounded bg-brand-maroon/5 dark:bg-red-950/40 text-brand-maroon dark:text-red-300 border border-brand-maroon/10 dark:border-red-800">
+                          <span className="text-[8px] sm:text-[9px] font-bold uppercase px-1.5 sm:px-2 py-0.5 rounded bg-brand-maroon/5 dark:bg-brand-maroon/20 text-brand-maroon dark:text-brand-maroon-light border border-brand-maroon/10 dark:border-brand-maroon/40">
                             {task.typeOfContent}
                           </span>
                           <span className="text-[8px] sm:text-[9px] font-bold uppercase px-1.5 sm:px-2 py-0.5 rounded bg-amber-500/10 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-500/20 dark:border-amber-800">
@@ -785,7 +791,7 @@ export default function AssignmentsList({
                               <span className="truncate flex items-center gap-1">
                                 <strong>ArtX Doc:</strong>
                                 {doc.url ? (
-                                  <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-brand-maroon dark:text-red-400 underline font-semibold hover:text-red-800 dark:hover:text-red-300">
+                                  <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-brand-maroon dark:text-brand-maroon-light underline font-semibold hover:text-red-800 dark:hover:text-red-300">
                                     {doc.label || "Open Document"}
                                   </a>
                                 ) : (
@@ -935,7 +941,7 @@ export default function AssignmentsList({
             >
               <div className="space-y-2 sm:space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-[9px] sm:text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-brand-maroon/5 dark:bg-brand-maroon/20 text-brand-maroon dark:text-red-400 border border-brand-maroon/10 dark:border-brand-maroon/30">
+                  <span className="text-[9px] sm:text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-brand-maroon/5 dark:bg-brand-maroon/20 text-brand-maroon dark:text-brand-maroon-light border border-brand-maroon/10 dark:border-brand-maroon/30">
                     {task.typeOfRelease}
                   </span>
                   
@@ -982,7 +988,7 @@ export default function AssignmentsList({
                   <div>
                     <span className="text-[9px] sm:text-[10px] text-gray-400 dark:text-neutral-400 uppercase font-semibold block">Layout Artist</span>
                     <span className="font-bold text-gray-700 dark:text-neutral-200 truncate block flex items-center gap-1">
-                      <User className="w-3 h-3 text-brand-maroon dark:text-red-400 shrink-0" />
+                      <User className="w-3 h-3 text-brand-maroon dark:text-brand-maroon-light shrink-0" />
                       <span className="truncate">{task.illusLayout}</span>
                     </span>
                   </div>
@@ -1012,7 +1018,7 @@ export default function AssignmentsList({
                     onOpenTaskDetails(task);
                     speakText("Opening full workspace dialogue for layout assignment card.");
                   }}
-                  className="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-brand-cream dark:bg-neutral-800 hover:bg-brand-maroon dark:hover:bg-brand-maroon text-brand-maroon dark:text-red-300 hover:text-white dark:hover:text-white border border-brand-maroon/20 dark:border-neutral-700 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
+                  className="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-brand-cream dark:bg-neutral-800 hover:bg-brand-maroon dark:hover:bg-brand-maroon text-brand-maroon dark:text-brand-maroon-light hover:text-white dark:hover:text-white border border-brand-maroon/20 dark:border-neutral-700 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
                 >
                   Workspace <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                 </button>

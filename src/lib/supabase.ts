@@ -218,6 +218,8 @@ export function taskToDb(task: Partial<Task>): any {
     writer: task.writer ?? "",
     illus_layout: task.illusLayout ?? "Unassigned",
     graphics: task.graphics ?? "",
+    assignee_email: task.assigneeEmail ?? null,
+    assignee_name: task.assigneeName ?? null,
     progress: task.progress ?? "Not Started",
     writeup: task.writeup ?? "",
     priority: task.priority ?? "Medium",
@@ -543,7 +545,8 @@ export function notificationFromDb(row: any): Notification {
     message: row.message || "",
     type: row.type || "info",
     timestamp: row.timestamp || row.created_at || new Date().toISOString(),
-    readBy: Array.isArray(row.read_by) ? row.read_by : []
+    readBy: Array.isArray(row.read_by) ? row.read_by : [],
+    userId: row.user_id || undefined
   };
 }
 
@@ -560,13 +563,21 @@ export async function fetchNotifications(): Promise<Notification[]> {
 export async function createNotification(n: Partial<Notification>): Promise<Notification | null> {
   if (!supabase || !n.title) return null;
   const id = ensureUuid(n.id);
+  // Alerts are per-account: resolve the target email to its profile id so each
+  // session can filter the feed down to its own rows.
+  let userId: string | null = n.userId || null;
+  if (!userId && n.targetEmail) {
+    const profile = await fetchUserProfileByEmail(n.targetEmail);
+    userId = profile?.id || null;
+  }
   const row = {
     id,
     title: n.title,
     message: n.message || "",
     type: n.type || "info",
     timestamp: n.timestamp ? new Date(n.timestamp).toISOString() : new Date().toISOString(),
-    read_by: Array.isArray(n.readBy) ? n.readBy : []
+    read_by: Array.isArray(n.readBy) ? n.readBy : [],
+    user_id: userId
   };
   const { data, error } = await supabase.from("notifications").insert(row).select().single();
   if (error) {

@@ -322,13 +322,13 @@ export default function TeamDirectory({
                   <div className="space-y-1.5 bg-neutral-50/70 p-2.5 rounded-xl border border-neutral-150">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-bold text-neutral-700 flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-[#bc1700]" /> Weekly Availability
+                        <Clock className="w-3 h-3 text-brand-maroon" /> Weekly Availability
                       </span>
                       {(isLayoutEditor || isSelf) && (
                         <button
                           type="button"
                           onClick={() => handleOpenScheduleModal(m)}
-                          className="text-[10px] font-bold text-[#bc1700] hover:underline cursor-pointer"
+                          className="text-[10px] font-bold text-brand-maroon hover:underline cursor-pointer"
                         >
                           Update
                         </button>
@@ -527,7 +527,7 @@ export default function TeamDirectory({
                           <button
                             type="button"
                             onClick={() => handleOpenScheduleModal(m)}
-                            className="text-[10px] text-[#bc1700] hover:underline font-bold cursor-pointer"
+                            className="text-[10px] text-brand-maroon hover:underline font-bold cursor-pointer"
                           >
                             Edit Schedule
                           </button>
@@ -600,7 +600,7 @@ export default function TeamDirectory({
             
             <div className="flex items-center justify-between border-b pb-3 border-neutral-200">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-[#bc1700]/10 text-[#bc1700] flex items-center justify-center">
+                <div className="w-9 h-9 rounded-xl bg-brand-maroon/10 text-brand-maroon flex items-center justify-center">
                   <Calendar className="w-5 h-5" />
                 </div>
                 <div>
@@ -624,7 +624,7 @@ export default function TeamDirectory({
             {/* 7 day-availability buttons: press a day to mark it unavailable for the whole day */}
             <div className="space-y-3">
               <p className="text-xs font-bold text-neutral-800">
-                Tap the days you are <span className="text-[#bc1700]">NOT available</span> for the whole day.
+                Tap the days you are <span className="text-brand-maroon">NOT available</span> for the whole day.
               </p>
               <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
                 {WEEK_DAYS.map((day) => {
@@ -637,8 +637,8 @@ export default function TeamDirectory({
                       aria-pressed={isOff}
                       className={`py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                         isOff
-                          ? "bg-[#bc1700] text-white border-[#bc1700] shadow-xs"
-                          : "bg-white text-neutral-700 border-neutral-300 hover:border-[#bc1700]/60 hover:text-[#bc1700]"
+                          ? "bg-brand-maroon text-white border-brand-maroon shadow-xs"
+                          : "bg-white text-neutral-700 border-neutral-300 hover:border-brand-maroon/60 hover:text-brand-maroon"
                       }`}
                     >
                       {day}
@@ -663,7 +663,7 @@ export default function TeamDirectory({
               <button
                 type="button"
                 onClick={handleSaveSchedule}
-                className="px-4 py-1.5 bg-[#bc1700] hover:bg-[#8e1200] text-white font-bold text-xs rounded-lg transition-colors cursor-pointer shadow-xs"
+                className="px-4 py-1.5 bg-brand-maroon hover:bg-brand-maroon-dark text-white font-bold text-xs rounded-lg transition-colors cursor-pointer shadow-xs"
               >
                 Save Schedule
               </button>
