@@ -134,7 +134,10 @@ export default function DashboardOverview({
 
   const activeArtistsCount = members.filter(m => m.statusSem1 === "Active" || m.statusSem2 === "Active").length;
   
-  const displayTasks = isStaffOrProbi ? staffAssignedTasks : tasks.slice(0, 4);
+  // "My Layout Assignments" must list only tasks assigned to the signed-in
+  // account — staff, probi, editor, and deputy alike. The editor/deputy used
+  // to get a raw slice of every task, leaking other members' assignments here.
+  const displayTasks = isStaffOrProbi ? staffAssignedTasks : staffAssignedTasks.slice(0, 4);
 
   const getTaskProgress = (task: Task) => {
     switch (task.progress) {

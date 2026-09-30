@@ -127,8 +127,7 @@ export default function LoginPage({ members, onLogin, speechEnabled, darkMode = 
     e.preventDefault();
     setErrorMsg("");
 
-    const rawEmail = emailInput.trim().toLowerCase();
-    const trimmedEmail = normalizeEmail(rawEmail).toLowerCase();
+    const trimmedEmail = normalizeEmail(emailInput.trim().toLowerCase()).toLowerCase();
     const trimmedPin = pinInput.trim();
 
     if (!trimmedEmail) {
@@ -178,32 +177,17 @@ export default function LoginPage({ members, onLogin, speechEnabled, darkMode = 
       }
     }
 
+    // Offline fallback (only reached on network-level Supabase failure):
+    // exact email + exact PIN against the registry. Members without a
+    // registry entry have no verifiable password, so they cannot sign in
+    // through this path at all.
     const matchedAccount = OFFICIAL_ACCOUNTS.find((acc) => {
-      const accEmail = acc.email.toLowerCase();
-      const accHandle = accEmail.split("@")[0];
-      const emailMatches =
-        accEmail === trimmedEmail ||
-        rawEmail === accHandle ||
-        rawEmail.startsWith(accHandle + "@") ||
-        (acc.email === "ctrodriguez2@up.edu.ph" && (rawEmail.includes("ctrodriguez2") || rawEmail.includes("mkulayout") || rawEmail.includes("rxtiannn"))) ||
-        (acc.name.includes("Donor") && (rawEmail.includes("donor") || rawEmail.includes("cndonor") || rawEmail.includes("cdonor") || rawEmail.includes("carl"))) ||
-        (acc.name.includes("Atienza") && rawEmail.includes("atienza")) ||
-        (acc.name.includes("Magno") && rawEmail.includes("magno")) ||
-        (acc.name.includes("Dizon") && rawEmail.includes("dizon"));
-
-      const pinMatches = acc.pin === trimmedPin || acc.pin.toLowerCase() === trimmedPin.toLowerCase();
-
-      return emailMatches && pinMatches;
+      const accEmail = normalizeEmail(acc.email).toLowerCase();
+      return accEmail === trimmedEmail && acc.pin === trimmedPin;
     });
 
     if (matchedAccount) {
       onLogin(matchedAccount.role, matchedAccount.name, matchedAccount.email);
-      return;
-    }
-
-    const memberMatch = members.find((m) => normalizeEmail(m.email).toLowerCase() === trimmedEmail || m.email.toLowerCase() === trimmedEmail);
-    if (memberMatch) {
-      onLogin(memberMatch.role as UserRole, memberMatch.name, normalizeEmail(memberMatch.email));
       return;
     }
 

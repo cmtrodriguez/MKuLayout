@@ -55,6 +55,14 @@ export function getAllCanvaTemplates(): (CanvaTemplate & { currentLink: string }
   }));
 }
 
+// Internal branding assets and multi-page pubs are not assignable content
+// categories, so they stay out of the assignment category picker.
+const PUBMAT_PICKER_EXCLUDED_IDS = new Set(["header", "press-id", "editorial-board", "jst", "multiple-page-pubs"]);
+
+export function getPubmatCanvaTemplates(): (CanvaTemplate & { currentLink: string })[] {
+  return getAllCanvaTemplates().filter((t) => !PUBMAT_PICKER_EXCLUDED_IDS.has(t.id));
+}
+
 export function extractHyperlinkDetails(input: string | undefined | null): { url: string; label: string } {
   if (!input) return { url: "", label: "" };
   const str = input.trim();

@@ -22,22 +22,12 @@ import { CanvaDirectory } from "./components/CanvaDirectory";
 import { OFFICIAL_MEMBERS_MAP, getPreferredFirstName, resolveLayoutAssignee, resolveMemberEmail, getEditorDeputyEmails } from "./lib/memberUtils";
 import { AccentTheme, applyAccentCssVars } from "./lib/accentTheme";
 import { seededUuid } from "./lib/seededUuid";
+import { getPubmatCanvaTemplates } from "./lib/canvaTemplates";
 import { supabase, fetchUserProfileByEmail, fetchTasks, fetchMembers, fetchComments, fetchCalendarEvents, fetchPolls, fetchAnnouncements, fetchNotifications, fetchIssueSheets, upsertTask, deleteTask, upsertMember, createComment, upsertCalendarEvent, deleteCalendarEvent, createPoll, updatePollOptionVotes, deletePoll, createNotification, markNotificationRead, createAnnouncement, saveIssueSheets, subscribeToLayoutRealtime } from "./lib/supabase";
 import mkuleImg from "./mkule.png";
 
 // Domain Models
 import { Task, TeamMember, CalendarEvent, Poll, Notification, TaskComment, UserRole, normalizeEmail } from "./types";
-
-// Canonical Canva workspace per content category. Assigned automatically on creation so
-// staff never have to paste a design link by hand.
-const CANVA_LINK_BY_CATEGORY: Record<string, string> = {
-  News: "https://canva.link/wivqojjmn675ek9",
-  Features: "https://canva.link/njge9atp9633hpf",
-  Opinion: "https://canva.link/m4fmpvw4jhqu63s",
-  Cult: "https://canva.link/s0vxxbc10zgoajg",
-  Editorial: "https://canva.link/k6wnamj4r2p7n04",
-  Graphics: "https://canva.link/exxhxuypbjzbj7k",
-};
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>("dashboard");
@@ -1041,7 +1031,11 @@ export default function App() {
 
     const selectedArtist = layoutArtistOptions.find((option) => option.value === formArtist);
     const resolvedAssignee = resolveLayoutAssignee(resolvedFormArtist, members);
-    const autoCanvaLink = CANVA_LINK_BY_CATEGORY[formContentType] || "";
+    // Category names are unique across the directory, so the first name/id
+    // match is the template whose link gets attached to the new task.
+    const autoCanvaLink = getPubmatCanvaTemplates().find(
+      (t) => t.name.toLowerCase() === formContentType.toLowerCase() || t.id === formContentType
+    )?.currentLink || "";
     const created: Task = {
       id: crypto.randomUUID(),
       title: formTitle,
@@ -2027,17 +2021,19 @@ export default function App() {
                   onChange={(e) => setFormContentType(e.target.value)}
                   className="w-full px-2.5 py-2 border border-neutral-200 rounded-xl bg-neutral-50 outline-none cursor-pointer"
                 >
-                  <option value="News">News</option>
-                  <option value="Features">Features (feats artx)</option>
-                  <option value="Opinion">Opinion (op artx)</option>
-                  <option value="Cult">Cult / Culture (cult artx)</option>
-                  <option value="Editorial">Editorial</option>
-                  <option value="Front">Front</option>
-                  <option value="MM">MM</option>
-                  <option value="Graphics">Graphics / Illustration</option>
-                  <option value="News Feats">News Feats</option>
-                  <option value="OP Persona">OP Persona</option>
-                  <option value="Opinion w/ Lola P">Opinion w/ Lola P</option>
+                  {["Branding & Gen", "Editorial", "Visuals & Layouts"].map((category) => {
+                    const categoryTemplates = getPubmatCanvaTemplates().filter((t) => t.category === category);
+                    if (categoryTemplates.length === 0) return null;
+                    return (
+                      <optgroup key={category} label={`--- ${category} ---`}>
+                        {categoryTemplates.map((t) => (
+                          <option key={t.id} value={t.name}>
+                            {t.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    );
+                  })}
                 </select>
               </div>
             </div>
