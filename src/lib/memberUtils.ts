@@ -20,6 +20,15 @@ export const OFFICIAL_MEMBERS_MAP: Record<string, MemberOfficialInfo> = {
     college: "CAS",
     contact: "9812918708"
   },
+  "mkulayout.upm@gmail.com": {
+    email: "mkulayout.upm@gmail.com",
+    officialName: "MKU Layout",
+    displayName: "MKU Layout",
+    preferredFirstName: "MKU",
+    role: "Layout Editor",
+    college: "CAS",
+    contact: "0000000000"
+  },
   "rcabad1@up.edu.ph": {
     email: "rcabad1@up.edu.ph",
     officialName: "Abad, Ryaen Vincent C.",

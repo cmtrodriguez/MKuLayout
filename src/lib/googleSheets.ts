@@ -34,6 +34,9 @@ export function getFirebaseAuth(): Auth {
 
 const provider = new GoogleAuthProvider();
 provider.addScope("https://www.googleapis.com/auth/spreadsheets");
+// Always show the Google account chooser so the editor can sync the Sheets
+// account they intend (not whichever session the browser happens to hold).
+provider.setCustomParameters({ prompt: "select_account" });
 
 let isSigningIn = false;
 let cachedAccessToken: string | null = null;

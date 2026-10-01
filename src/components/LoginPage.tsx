@@ -36,6 +36,15 @@ export const OFFICIAL_ACCOUNTS: OfficialAccount[] = [
     pin: "K9mP2x7R",
   },
   {
+    role: "Layout Editor" as UserRole,
+    name: "MKU Layout",
+    displayName: "MKU Layout",
+    college: "CAS",
+    email: "mkulayout.upm@gmail.com",
+    contact: "0000000000",
+    pin: "Upm26Mkl",
+  },
+  {
     role: "Layout Deputy" as UserRole,
     name: "Ronz Abad",
     displayName: "Ronz Abad",

@@ -15,6 +15,8 @@ try {
 const provider = new GoogleAuthProvider();
 provider.addScope('https://www.googleapis.com/auth/drive');
 provider.addScope('https://www.googleapis.com/auth/documents');
+// Show the account chooser so sharing/granting uses the intended Google account.
+provider.setCustomParameters({ prompt: 'select_account' });
 
 let cachedAccessToken: string | null = null;
 let isSigningIn = false;
