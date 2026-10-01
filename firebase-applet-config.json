@@ -1,11 +1,11 @@
 {
-  "projectId": "canvas-liberty-s5jvd",
-  "appId": "1:42796457438:web:8b9b871ab47d05f8d4514f",
-  "apiKey": "AIzaSyCLlJUcU181ZQ_luNiNi5Zz3ravSdCnauY",
-  "authDomain": "canvas-liberty-s5jvd.firebaseapp.com",
-  "storageBucket": "canvas-liberty-s5jvd.firebasestorage.app",
-  "messagingSenderId": "42796457438",
-  "measurementId": "",
-  "oAuthClientId": "42796457438-qsptorfeuc07nhjfej6et95l5atl1gf2.apps.googleusercontent.com",
+  "projectId": "mkulayoutt",
+  "appId": "1:561799271683:web:1de368d645a3346b440536",
+  "apiKey": "AIzaSyBPVp9U82nlEPNk11yNBciC-nBQi4GdkkM",
+  "authDomain": "mkulayoutt.firebaseapp.com",
+  "storageBucket": "mkulayoutt.firebasestorage.app",
+  "messagingSenderId": "561799271683",
+  "measurementId": "G-3PQ45TEM0C",
+  "oAuthClientId": "",
   "recaptchaSiteKey": ""
 }
