@@ -4,7 +4,7 @@ import {
   HelpCircle, LogOut, Layers, Sparkles, Database, Shield, AlertCircle,
   Plus, Edit, Trash2, Copy, Search, ArrowUpDown, ChevronLeft, ChevronRight,
   Check, Undo2, Redo2, Maximize, Minimize, ZoomIn, ZoomOut, CheckCircle, X, ListPlus, Edit3,
-  Columns, Split, Table, Eye, Printer
+  Columns, Split, Table, Eye, Printer, FileText
 } from "lucide-react";
 import { Task, TeamMember, SheetMerge, normalizeEmail } from "../types";
 import {
@@ -2759,31 +2759,35 @@ export default function SheetsSync({
 
       {/* --- ADD ROW POPUP DIALOG MODAL --- */}
       {showAddRowModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl w-full max-w-xl p-6 shadow-2xl border border-neutral-100 text-left animate-fade-in text-xs space-y-4 max-h-[85vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b pb-2.5">
-              <h3 className="font-display font-black text-neutral-950 text-sm flex items-center gap-1.5">
-                <FileSpreadsheet className="w-4 h-4 text-brand-maroon" /> {editingRowIdx !== null ? "Edit Spreadsheet Row" : "Add Spreadsheet Row"}
-              </h3>
-              <button 
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-neutral-900 rounded-3xl w-full max-w-lg p-6 shadow-2xl border border-neutral-100 dark:border-neutral-800 text-left animate-fade-in text-xs space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-neutral-800 pb-2.5">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-brand-maroon/10 text-brand-maroon dark:text-brand-maroon-light rounded-lg">
+                  <FileSpreadsheet className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-display font-black text-neutral-950 dark:text-neutral-100 text-sm flex items-center gap-1.5">
+                    {editingRowIdx !== null ? "Edit Spreadsheet Row" : "Add Spreadsheet Row"}
+                  </h3>
+                  <span className="text-[10px] text-brand-maroon dark:text-brand-maroon-light font-semibold">
+                    Google Sheets Row Editor
+                  </span>
+                </div>
+              </div>
+              <button
                 onClick={() => {
                   setShowAddRowModal(false);
                   setEditingRowIdx(null);
                 }}
-                className="p-1 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600"
+                className="p-1 bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-750 rounded-full text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 transition-all cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleAddRowConfirm} className="space-y-4">
-              <p className="text-neutral-500 text-[11px]">
-                {editingRowIdx !== null 
-                  ? "Update column values for this row. The sheet's layout, sequence numbers, and formatting will be fully updated and preserved."
-                  : "Please provide column values. This row will be appended directly to your spreadsheet worksheet. Alternating row background, borders, and conditional formats will be fully preserved."}
-              </p>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form onSubmit={handleAddRowConfirm} className="space-y-3.5">
+              <div className="grid grid-cols-2 gap-3">
                 {sheetCells[0]?.map((colName, idx) => {
                   if (colName?.toLowerCase() === "na") return null; // Skip sequence counters
 
@@ -2813,68 +2817,77 @@ export default function SheetsSync({
 
                   if (isDraftLink) {
                     return (
-                      <div key={idx} className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3.5 p-3.5 bg-neutral-50/80 rounded-2xl border border-neutral-200">
-                        <div className="space-y-1">
-                          <label className="font-bold text-neutral-800 block text-xs">
-                            ArtX Document Text Title (Draft)
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="e.g. Kulto Feature Final Article"
-                            value={artxDocTitle}
-                            onChange={(e) => setArtxDocTitle(e.target.value)}
-                            className="w-full px-3 py-2 border border-neutral-250 bg-white rounded-xl focus:ring-1 focus:ring-brand-maroon outline-none text-xs"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="font-bold text-neutral-800 block text-xs flex items-center justify-between">
-                            <span>ArtX Document Hyperlink (URL)</span>
-                            {isFetchingDocTitle && (
-                              <span className="text-[10px] text-brand-maroon animate-pulse font-semibold">Auto-fetching title...</span>
-                            )}
-                          </label>
-                          <input
-                            type="url"
-                            placeholder="e.g. https://docs.google.com/document/d/..."
-                            value={artxDocUrl}
-                            onChange={async (e) => {
-                              const urlVal = e.target.value;
-                              setArtxDocUrl(urlVal);
+                      <div key={idx} className="col-span-2 bg-brand-cream/35 dark:bg-neutral-800/60 p-3 rounded-2xl border border-brand-maroon/20 dark:border-brand-maroon/30 space-y-2">
+                        <label className="text-gray-900 dark:text-neutral-100 font-bold flex items-center gap-1.5 text-xs">
+                          <FileText className="w-4 h-4 text-brand-maroon dark:text-brand-maroon-light" />
+                          <span>Document Link (ArtX / Writeup)</span>
+                        </label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-neutral-600 dark:text-neutral-300 font-semibold block text-xs">
+                              ArtX Document Text Title (Draft)
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g. Kulto Feature Final Article"
+                              value={artxDocTitle}
+                              onChange={(e) => setArtxDocTitle(e.target.value)}
+                              className="w-full px-3 py-2 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-1 focus:ring-red-600 outline-none bg-white dark:bg-neutral-800 text-xs"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-neutral-600 dark:text-neutral-300 font-semibold block text-xs flex items-center justify-between">
+                              <span>ArtX Document Hyperlink (URL)</span>
+                              {isFetchingDocTitle && (
+                                <span className="text-[10px] text-brand-maroon animate-pulse font-semibold">Auto-fetching title...</span>
+                              )}
+                            </label>
+                            <input
+                              type="url"
+                              placeholder="e.g. https://docs.google.com/document/d/..."
+                              value={artxDocUrl}
+                              onChange={async (e) => {
+                                const urlVal = e.target.value;
+                                setArtxDocUrl(urlVal);
 
-                              // Extract hyperlink details if pasted formula or markdown
-                              const extracted = extractHyperlinkDetails(urlVal);
-                              if (extracted.label && extracted.label !== extracted.url) {
-                                setArtxDocTitle(extracted.label);
-                                if (extracted.url !== urlVal) setArtxDocUrl(extracted.url);
-                                return;
-                              }
-
-                              // Auto-fetch Google Docs title if text title is empty or matching url
-                              if ((urlVal.startsWith("http://") || urlVal.startsWith("https://")) && (!artxDocTitle || artxDocTitle === artxDocUrl)) {
-                                setIsFetchingDocTitle(true);
-                                try {
-                                  const res = await fetch(`/api/gdoc-title?url=${encodeURIComponent(urlVal)}`);
-                                  const data = await res.json();
-                                  if (data.title) {
-                                    setArtxDocTitle(data.title);
-                                  }
-                                } catch (err) {
-                                  console.error("Doc title fetch error:", err);
-                                } finally {
-                                  setIsFetchingDocTitle(false);
+                                // Extract hyperlink details if pasted formula or markdown
+                                const extracted = extractHyperlinkDetails(urlVal);
+                                if (extracted.label && extracted.label !== extracted.url) {
+                                  setArtxDocTitle(extracted.label);
+                                  if (extracted.url !== urlVal) setArtxDocUrl(extracted.url);
+                                  return;
                                 }
-                              }
-                            }}
-                            className="w-full px-3 py-2 border border-neutral-250 bg-white rounded-xl focus:ring-1 focus:ring-brand-maroon outline-none text-xs"
-                          />
+
+                                // Auto-fetch Google Docs title if text title is empty or matching url
+                                if ((urlVal.startsWith("http://") || urlVal.startsWith("https://")) && (!artxDocTitle || artxDocTitle === artxDocUrl)) {
+                                  setIsFetchingDocTitle(true);
+                                  try {
+                                    const res = await fetch(`/api/gdoc-title?url=${encodeURIComponent(urlVal)}`);
+                                    const data = await res.json();
+                                    if (data.title) {
+                                      setArtxDocTitle(data.title);
+                                    }
+                                  } catch (err) {
+                                    console.error("Doc title fetch error:", err);
+                                  } finally {
+                                    setIsFetchingDocTitle(false);
+                                  }
+                                }
+                              }}
+                              className="w-full px-3 py-2 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-1 focus:ring-red-600 outline-none bg-white dark:bg-neutral-800 font-mono text-[11px]"
+                            />
+                          </div>
                         </div>
+                        <p className="text-[10px] text-gray-500 dark:text-neutral-400 font-medium">
+                          Paste any shared document or reference link to keep the assignment organized.
+                        </p>
                       </div>
                     );
                   }
 
                   return (
-                    <div key={idx} className="space-y-1">
-                      <label className="font-bold text-neutral-800 block capitalize">
+                    <div key={idx}>
+                      <label className="text-neutral-600 dark:text-neutral-300 font-semibold block mb-1 capitalize">
                         {colName || `Column ${getColLetter(idx)}`}
                         {colName?.toLowerCase().includes("title") && <span className="text-red-600 ml-0.5">*</span>}
                       </label>
@@ -2892,7 +2905,7 @@ export default function SheetsSync({
                               updated[idx] = e.target.value;
                               setAddRowValues(updated);
                             }}
-                            className="w-full px-3 py-2 border border-neutral-250 bg-white rounded-xl focus:ring-1 focus:ring-brand-maroon outline-none"
+                            className="w-full px-2.5 py-2 border border-neutral-200 dark:border-neutral-700 rounded-xl bg-neutral-50 dark:bg-neutral-800 outline-none cursor-pointer"
                           >
                             <option value="">Select Category</option>
                             {!matchedCat && currentVal && (
@@ -2916,7 +2929,7 @@ export default function SheetsSync({
                             }
                             setAddRowValues(updated);
                           }}
-                          className="w-full px-3 py-2 border border-neutral-250 bg-white rounded-xl focus:ring-1 focus:ring-brand-maroon outline-none"
+                          className="w-full px-2.5 py-2 border border-neutral-200 dark:border-neutral-700 rounded-xl bg-neutral-50 dark:bg-neutral-800 outline-none cursor-pointer"
                         >
                           <option value="">Unassigned</option>
                           {members.map(m => {
@@ -2934,7 +2947,7 @@ export default function SheetsSync({
                             updated[idx] = e.target.value;
                             setAddRowValues(updated);
                           }}
-                          className="w-full px-3 py-2 border border-neutral-250 bg-white rounded-xl focus:ring-1 focus:ring-brand-maroon outline-none"
+                          className="w-full px-2.5 py-2 border border-neutral-200 dark:border-neutral-700 rounded-xl bg-neutral-50 dark:bg-neutral-800 outline-none cursor-pointer"
                         >
                           <option value="">Unassigned</option>
                           {members.map(m => {
@@ -2954,7 +2967,7 @@ export default function SheetsSync({
                             updated[idx] = e.target.value;
                             setAddRowValues(updated);
                           }}
-                          className="w-full px-3 py-2 border border-neutral-250 bg-white rounded-xl focus:ring-1 focus:ring-brand-maroon outline-none"
+                          className="w-full px-3 py-2 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-1 focus:ring-red-600 outline-none bg-white dark:bg-neutral-800"
                         />
                       )}
                     </div>
@@ -2962,25 +2975,12 @@ export default function SheetsSync({
                 })}
               </div>
 
-              <div className="pt-3 border-t border-neutral-100 flex justify-end gap-2 text-xs">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAddRowModal(false);
-                    setEditingRowIdx(null);
-                  }}
-                  className="px-4 py-2 border border-neutral-200 text-neutral-600 hover:text-neutral-800 hover:bg-neutral-50 rounded-xl transition-all cursor-pointer font-bold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-brand-maroon text-white font-bold rounded-xl hover:bg-brand-maroon-dark transition-all cursor-pointer flex items-center gap-1 shadow-sm"
-                >
-                  <CheckCircle className="w-3.5 h-3.5" />
-                  <span>{editingRowIdx !== null ? "Confirm & Update Row" : "Confirm & Sync Row"}</span>
-                </button>
-              </div>
+              <button
+                type="submit"
+                className="w-full py-2.5 bg-gradient-to-r from-brand-maroon to-brand-maroon-dark hover:opacity-95 text-white font-bold rounded-xl cursor-pointer transition-all shadow-[var(--brand-shadow-med)]"
+              >
+                {editingRowIdx !== null ? "Confirm & Update Row" : "Confirm & Sync Row"}
+              </button>
             </form>
           </div>
         </div>
