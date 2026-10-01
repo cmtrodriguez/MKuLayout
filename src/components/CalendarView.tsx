@@ -155,8 +155,13 @@ export default function CalendarView({
     return null;
   };
 
-  // Task deadlines rendered as calendar entries alongside standalone events
+  // Task deadlines rendered as calendar entries alongside standalone events.
+  // Completed/approved/archived tasks are dropped — their deadline is already done.
+  const isDoneTask = (t: Task) =>
+    t.progress === "Completed" || t.progress === "Approved" || t.progress === "Archived";
+
   const taskEntries = tasks
+    .filter(t => !isDoneTask(t))
     .map(t => ({ id: `task-${t.id}`, title: t.title, start: toTaskISO(t.releaseDate || "") || "", type: "deadline" as const, isTask: true, isPersonal: false, description: "", category: t.typeOfContent || "" }))
     .filter(e => e.start);
 
