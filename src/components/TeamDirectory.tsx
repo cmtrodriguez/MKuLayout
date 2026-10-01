@@ -455,7 +455,7 @@ export default function TeamDirectory({
       {/* VIEW 2: Account Details & Credentials Table */}
       {viewMode === "table" && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
-          <div className="p-3.5 sm:p-4 bg-neutral-50/80 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="p-3.5 sm:p-4 bg-neutral-50/80 dark:bg-neutral-800/80 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <h4 className="font-display font-bold text-xs sm:text-sm text-gray-900">
                 Layout Section Member Directory &amp; Schedule Roster
@@ -485,7 +485,7 @@ export default function TeamDirectory({
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-neutral-100/75 text-neutral-600 text-[10px] font-bold uppercase tracking-wider border-b border-neutral-200">
+              <thead className="bg-neutral-100/75 dark:bg-neutral-800 text-neutral-600 text-[10px] font-bold uppercase tracking-wider border-b border-neutral-200">
                 <tr>
                   <th className="py-3 px-4">Display Name &amp; Member</th>
                   <th className="py-3 px-3">Role</th>
