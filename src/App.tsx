@@ -1531,6 +1531,7 @@ export default function App() {
               <SheetsSync
                 tasks={tasks}
                 members={members}
+                layoutArtistOptions={layoutArtistOptions}
                 speechEnabled={speechEnabled}
                 currentUserRole={userRole}
                 onUpdateTasks={handleSheetsSyncTasks}

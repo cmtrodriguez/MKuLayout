@@ -60,6 +60,7 @@ export function parseHyperlinkCell(cellValue: any): { url: string; title: string
 interface SheetsSyncProps {
   tasks: Task[];
   members: TeamMember[];
+  layoutArtistOptions?: { value: string; label: string; email?: string }[];
   speechEnabled: boolean;
   currentUserRole: string;
   onUpdateTasks: (tasks: Task[]) => void;
@@ -71,6 +72,7 @@ interface SheetsSyncProps {
 export default function SheetsSync({
   tasks,
   members,
+  layoutArtistOptions = [],
   speechEnabled,
   currentUserRole,
   onUpdateTasks,
@@ -80,6 +82,17 @@ export default function SheetsSync({
 }: SheetsSyncProps) {
   // Subsections toggle
   const [activeSubTab, setActiveSubTab] = useState<"editor" | "viewer">("editor");
+
+  // Layout/Online assignee dropdown names — mirror the Online Pubmat modal.
+  // Prefer the role-filtered layoutArtistOptions from App; fall back to raw members.
+  const artistNameOptions = Array.from(
+    new Set(
+      (layoutArtistOptions.length
+        ? layoutArtistOptions.map((o) => o.label)
+        : members.map((m) => getFirstName(m.name))
+      ).filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b));
 
   const [syncStatus, setSyncStatus] = useState<"idle" | "authenticating" | "downloading" | "merging" | "success">("idle");
   const [linkInput, setLinkInput] = useState(googleSheetsLink);
@@ -2932,12 +2945,9 @@ export default function SheetsSync({
                           className="w-full px-2.5 py-2 border border-neutral-200 dark:border-neutral-700 rounded-xl bg-neutral-50 dark:bg-neutral-800 outline-none cursor-pointer"
                         >
                           <option value="">Unassigned</option>
-                          {members.map(m => {
-                            const firstName = getFirstName(m.name);
-                            return (
-                              <option key={m.id} value={firstName}>{firstName}</option>
-                            );
-                          })}
+                          {artistNameOptions.map((firstName) => (
+                            <option key={firstName} value={firstName}>{firstName}</option>
+                          ))}
                         </select>
                       ) : isOnline ? (
                         <select
@@ -2950,12 +2960,9 @@ export default function SheetsSync({
                           className="w-full px-2.5 py-2 border border-neutral-200 dark:border-neutral-700 rounded-xl bg-neutral-50 dark:bg-neutral-800 outline-none cursor-pointer"
                         >
                           <option value="">Unassigned</option>
-                          {members.map(m => {
-                            const firstName = getFirstName(m.name);
-                            return (
-                              <option key={m.id} value={firstName}>{firstName}</option>
-                            );
-                          })}
+                          {artistNameOptions.map((firstName) => (
+                            <option key={firstName} value={firstName}>{firstName}</option>
+                          ))}
                         </select>
                       ) : (
                         <input
