@@ -57,6 +57,37 @@ export function parseHyperlinkCell(cellValue: any): { url: string; title: string
   return { url: "", title: trimmed };
 }
 
+// True when a URL points at a Google Docs document (the ArtX / writeup link).
+export const isGoogleDocsLink = (url: string | undefined | null): boolean =>
+  !!url && /docs\.google\.com\/document|docs\.google\.com/i.test(url);
+
+// Renders a sheet cell hyperlink. Google Docs (ArtX) links get a distinct
+// document icon and colour so they stand out from generic external links.
+function CellLink({ url, label, stopPropagation }: { url: string; label: string; stopPropagation?: boolean }) {
+  const isDocs = isGoogleDocsLink(url);
+  const Icon = isDocs ? FileText : ExternalLink;
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={stopPropagation ? (e) => e.stopPropagation() : undefined}
+      className={`inline-flex items-center gap-1 max-w-full truncate underline font-semibold ${
+        isDocs ? "text-blue-700 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300" : "text-brand-maroon hover:text-red-800"
+      }`}
+      title={isDocs ? `Google Docs ArtX link: ${url}` : `Open link: ${url}`}
+    >
+      <Icon className="w-3 h-3 shrink-0" />
+      <span className="truncate">{label}</span>
+      {isDocs && (
+        <span className="shrink-0 px-1 py-0.2 rounded bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300 text-[9px] font-bold no-underline">
+          ArtX
+        </span>
+      )}
+    </a>
+  );
+}
+
 interface SheetsSyncProps {
   tasks: Task[];
   members: TeamMember[];
@@ -989,6 +1020,21 @@ export default function SheetsSync({
     let validUrl = details.url && (details.url.startsWith("http://") || details.url.startsWith("https://")) ? details.url : "";
     let validTitle = cleanTitleCandidate(details.label) || cleanTitleCandidate(draftCellVal);
 
+    // 0. Prefer a Google Docs (ArtX) link from anywhere in the row, even if the
+    //    draft-link column held a different URL, so the ArtX field auto-fills.
+    if (!isGoogleDocsLink(validUrl)) {
+      for (const cell of currentValues) {
+        if (cell && typeof cell === "string") {
+          const d = extractHyperlinkDetails(cell);
+          if (isGoogleDocsLink(d.url)) {
+            validUrl = d.url;
+            if (!validTitle) validTitle = cleanTitleCandidate(d.label);
+            break;
+          }
+        }
+      }
+    }
+
     // 1. Check all other cells in this row for a valid HTTP/HTTPS URL if draft link cell has none
     if (!validUrl) {
       for (const cell of currentValues) {
@@ -1796,36 +1842,10 @@ export default function SheetsSync({
                               if (!trimmed) return <span className="text-gray-300 italic font-normal">-</span>;
                               const hyperMatch = trimmed.match(/^=HYPERLINK\(\s*"([^"]+)"(?:\s*,\s*"([^"]+)")?\s*\)$/i);
                               if (hyperMatch) {
-                                const url = hyperMatch[1];
-                                const displayTitle = hyperMatch[2] || url;
-                                return (
-                                  <a
-                                    href={url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="text-brand-maroon underline font-semibold hover:text-red-800 inline-flex items-center gap-1 max-w-full truncate"
-                                    title={`Open link: ${url}`}
-                                  >
-                                    <span className="truncate">{displayTitle}</span>
-                                    <ExternalLink className="w-3 h-3 shrink-0" />
-                                  </a>
-                                );
+                                return <CellLink url={hyperMatch[1]} label={hyperMatch[2] || hyperMatch[1]} stopPropagation />;
                               }
                               if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-                                return (
-                                  <a
-                                    href={trimmed}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="text-brand-maroon underline font-semibold hover:text-red-800 inline-flex items-center gap-1 max-w-full truncate"
-                                    title={trimmed}
-                                  >
-                                    <span className="truncate">{trimmed}</span>
-                                    <ExternalLink className="w-3 h-3 shrink-0" />
-                                  </a>
-                                );
+                                return <CellLink url={trimmed} label={trimmed} stopPropagation />;
                               }
                               return cell;
                             })()}
@@ -2234,35 +2254,11 @@ export default function SheetsSync({
                                       
                                       const hyperMatch = trimmed.match(/^=HYPERLINK\(\s*"([^"]+)"(?:\s*,\s*"([^"]+)")?\s*\)$/i);
                                       if (hyperMatch) {
-                                        const url = hyperMatch[1];
-                                        const displayTitle = hyperMatch[2] || url;
-                                        return (
-                                          <a
-                                            href={url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-brand-maroon underline font-semibold hover:text-red-800 inline-flex items-center gap-1 max-w-full truncate"
-                                            title={`Open link: ${url}`}
-                                          >
-                                            <span className="truncate">{displayTitle}</span>
-                                            <ExternalLink className="w-3 h-3 shrink-0" />
-                                          </a>
-                                        );
+                                        return <CellLink url={hyperMatch[1]} label={hyperMatch[2] || hyperMatch[1]} />;
                                       }
 
                                       if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-                                        return (
-                                          <a
-                                            href={trimmed}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-brand-maroon underline font-semibold hover:text-red-800 inline-flex items-center gap-1 max-w-full truncate"
-                                            title={trimmed}
-                                          >
-                                            <span className="truncate">{trimmed}</span>
-                                            <ExternalLink className="w-3 h-3 shrink-0" />
-                                          </a>
-                                        );
+                                        return <CellLink url={trimmed} label={trimmed} />;
                                       }
 
                                       // Tag badges for common publication statuses
