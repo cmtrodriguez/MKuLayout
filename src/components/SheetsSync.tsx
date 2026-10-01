@@ -61,6 +61,14 @@ export function parseHyperlinkCell(cellValue: any): { url: string; title: string
 export const isGoogleDocsLink = (url: string | undefined | null): boolean =>
   !!url && /docs\.google\.com\/document|docs\.google\.com/i.test(url);
 
+// Shows a cell's display label instead of a raw =HYPERLINK(...) formula, so
+// modal inputs read cleanly while the underlying link stays in state.
+const cellDisplayValue = (v: any): string => {
+  const s = String(v ?? "");
+  const m = s.match(/^=HYPERLINK\(\s*"([^"]+)"(?:\s*,\s*"([^"]+)")?\s*\)$/i);
+  return m ? m[2] || m[1] : s;
+};
+
 // Renders a sheet cell hyperlink. Google Docs (ArtX) links get a distinct
 // document icon and colour so they stand out from generic external links.
 function CellLink({ url, label, stopPropagation }: { url: string; label: string; stopPropagation?: boolean }) {
@@ -1020,19 +1028,25 @@ export default function SheetsSync({
     let validUrl = details.url && (details.url.startsWith("http://") || details.url.startsWith("https://")) ? details.url : "";
     let validTitle = cleanTitleCandidate(details.label) || cleanTitleCandidate(draftCellVal);
 
-    // 0. Prefer a Google Docs (ArtX) link from anywhere in the row, even if the
-    //    draft-link column held a different URL, so the ArtX field auto-fills.
-    if (!isGoogleDocsLink(validUrl)) {
-      for (const cell of currentValues) {
-        if (cell && typeof cell === "string") {
-          const d = extractHyperlinkDetails(cell);
-          if (isGoogleDocsLink(d.url)) {
-            validUrl = d.url;
-            if (!validTitle) validTitle = cleanTitleCandidate(d.label);
-            break;
-          }
+    // 0. The title cell (or any other cell) may itself be a hyperlink to the ArtX
+    //    Google Doc. Prefer the title cell's own link, then any docs link in the
+    //    row, so the ArtX URL field auto-fills from whatever link the title carries.
+    const findDocsLink = (idxList: number[]) => {
+      for (const i of idxList) {
+        const c = currentValues[i];
+        if (c && typeof c === "string") {
+          const d = extractHyperlinkDetails(c);
+          if (isGoogleDocsLink(d.url)) return d;
         }
       }
+      return null;
+    };
+    const docsHit =
+      (titleIdx !== -1 ? findDocsLink([titleIdx]) : null) ||
+      findDocsLink(currentValues.map((_, i) => i));
+    if (docsHit) {
+      validUrl = docsHit.url;
+      if (!validTitle) validTitle = cleanTitleCandidate(docsHit.label);
     }
 
     // 1. Check all other cells in this row for a valid HTTP/HTTPS URL if draft link cell has none
@@ -2963,7 +2977,7 @@ export default function SheetsSync({
                       ) : (
                         <input
                           type="text"
-                          value={addRowValues[idx] || ""}
+                          value={cellDisplayValue(addRowValues[idx])}
                           placeholder={`Enter cell value...`}
                           onChange={(e) => {
                             const updated = [...addRowValues];

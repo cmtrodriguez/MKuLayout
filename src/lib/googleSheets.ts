@@ -439,7 +439,7 @@ export async function deleteSheetTab(spreadsheetId: string, sheetId: number, tok
 export async function getSheetValues(spreadsheetId: string, range: string, token: string): Promise<string[][]> {
   // 1. Attempt grid data fetch to retrieve underlying cell hyperlinks (formula links & rich text links)
   try {
-    const gridUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?ranges=${encodeURIComponent(range)}&includeGridData=true&fields=sheets.data.rowData.values(formattedValue,userEnteredValue,hyperlink,textFormatRuns)`;
+    const gridUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?ranges=${encodeURIComponent(range)}&includeGridData=true`;
     const gridRes = await fetch(gridUrl, {
       headers: { Authorization: `Bearer ${token}` },
     });
