@@ -336,6 +336,36 @@ export default function SheetsSync({
           setRedoStack([]);
           currentGrid = padded;
           localStorage.setItem(`cache_vals_${spreadsheetId}_${sheetTitle}`, JSON.stringify(padded));
+
+          // Ingest pre-existing rows on first connect, and pick up rows added or
+          // edited directly in the live Sheet, so they surface as tasks. Row
+          // signatures are persisted so a reload only dispatches real deltas.
+          try {
+            const sigKey = `row_sigs_${spreadsheetId}_${sheetTitle}`;
+            let prevSigs: Record<string, string> = {};
+            try { prevSigs = JSON.parse(localStorage.getItem(sigKey) || "{}"); } catch { prevSigs = {}; }
+            const headers = padded[0] || [];
+            const tIdx = headers.findIndex(h => {
+              const s = (h || "").toLowerCase();
+              return s.includes("title") || s.includes("summary") || s.includes("artx") || s.includes("assignment");
+            });
+            if (tIdx !== -1) {
+              const nextSigs: Record<string, string> = {};
+              const changedRows: string[][] = [];
+              for (let r = 1; r < padded.length; r++) {
+                const row = padded[r];
+                const rowTitle = String(row[tIdx] || "").trim();
+                if (!rowTitle) continue;
+                const sig = JSON.stringify(row);
+                nextSigs[rowTitle] = sig;
+                if (prevSigs[rowTitle] !== sig) changedRows.push(row);
+              }
+              localStorage.setItem(sigKey, JSON.stringify(nextSigs));
+              if (changedRows.length > 0) dispatchRowsToOnlinePubmat(changedRows, headers);
+            }
+          } catch (ingestErr) {
+            console.warn("Row ingest skipped:", ingestErr);
+          }
         } else {
           const emptyGrid = createBlankGrid(25, 10);
           setSheetCells(emptyGrid);
@@ -568,18 +598,16 @@ export default function SheetsSync({
     return sliced.map(row => row.slice(0, maxCol));
   };
 
-  // Online Pubmat Integration: automatically dispatch ONLY new or edited rows as pending publication requests
-  const dispatchSingleRowToOnlinePubmat = (rowValues: string[], headers: string[]) => {
-    if (!rowValues || rowValues.length === 0 || !headers || headers.length === 0) return;
+  // Online Pubmat Integration: automatically dispatch new or edited rows as pending publication requests
+  const dispatchRowsToOnlinePubmat = (rowList: string[][], headers: string[]) => {
+    if (!rowList || rowList.length === 0 || !headers || headers.length === 0) return;
 
     const titleIdx = headers.findIndex(h => {
       const s = h?.toLowerCase() || "";
       return s.includes("title") || s.includes("summary") || s.includes("artx") || s.includes("assignment");
     });
-    
+
     if (titleIdx === -1) return; // No title column
-    const title = String(rowValues[titleIdx] || "").trim();
-    if (!title) return; // Empty title row
 
     const catIdx = headers.findIndex(h => {
       const s = h?.toLowerCase() || "";
@@ -610,72 +638,85 @@ export default function SheetsSync({
       return s.includes("added") || s.includes("final") || s.includes("layout?");
     });
 
-    const typeOfContent = (catIdx !== -1 ? rowValues[catIdx] : "feats artx") || "feats artx";
-    const writer = (writerIdx !== -1 ? rowValues[writerIdx] : "Unknown Writer") || "Unknown Writer";
-    const illusLayout = (layoutIdx !== -1 ? rowValues[layoutIdx] : "Unassigned") || "Unassigned";
-    const graphicsIllus = (graphicsIdx !== -1 ? rowValues[graphicsIdx] : "") || "";
-    const onlineHandler = (onlineIdx !== -1 ? rowValues[onlineIdx] : "") || "";
-    const draftLink = (draftIdx !== -1 ? rowValues[draftIdx] : "") || "";
-    const addedToLayout = (addedIdx !== -1 ? rowValues[addedIdx] : "") || "No";
-    const sourceIssueRowId = `sheet-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 48) || Date.now()}`;
-
     const updatedTasksList = [...tasks];
-    const existingIndex = updatedTasksList.findIndex(t =>
-      t.isPendingConfirmation && (
-        t.sourceIssueRowId === sourceIssueRowId ||
-        t.title.replace(/\s*\(Online Pubmat\)$/i, "").trim().toLowerCase() === title.toLowerCase()
-      )
-    );
+    let changed = false;
 
-    if (existingIndex !== -1) {
-      // Row was EDITED: Sync attributes and trigger pending publication request in Online Pubmat
-      const ext = updatedTasksList[existingIndex];
-      updatedTasksList[existingIndex] = {
-        ...ext,
-        title,
-        typeOfContent,
-        writer,
-        illusLayout,
-        graphicsIllus: graphicsIllus || ext.graphicsIllus,
-        graphics: graphicsIllus || ext.graphics,
-        onlineHandler: onlineHandler || ext.onlineHandler,
-        progress: "Pending" as any,
-        isPendingConfirmation: true, // Dispatch request to Online Pubmat on edit!
-        draftLink: draftLink || ext.draftLink,
-        writeup: draftLink || ext.writeup,
-        addedToLayout: addedToLayout || ext.addedToLayout,
-        sourceIssueRowId: ext.sourceIssueRowId || sourceIssueRowId,
-        lastUpdated: new Date().toISOString()
-      };
-    } else {
-      // Completely NEW row added: Trigger pending Online Pubmat Entry
-      const newTask: Task = {
-        id: `sheet-t-${Date.now()}`,
-        title,
-        typeOfRelease: "Issue Article",
-        typeOfContent,
-        writer,
-        illusLayout,
-        graphicsIllus,
-        graphics: graphicsIllus,
-        onlineHandler,
-        progress: "Pending" as any,
-        priority: "Medium",
-        draftLink,
-        writeup: draftLink,
-        addedToLayout,
-        isPendingConfirmation: true, // Dispatches request to Online Pubmat!
-        sourceIssueRowId,
-        files: [],
-        commentsCount: 0,
-        revisionCount: 0,
-        lastUpdated: new Date().toISOString(),
-        releaseDate: "JULY 15"
-      };
-      updatedTasksList.push(newTask);
-    }
+    rowList.forEach((rowValues, rowIdx) => {
+      if (!rowValues || rowValues.length === 0) return;
+      const title = String(rowValues[titleIdx] || "").trim();
+      if (!title) return; // Empty title row
 
-    onUpdateTasks(updatedTasksList);
+      const typeOfContent = (catIdx !== -1 ? rowValues[catIdx] : "feats artx") || "feats artx";
+      const writer = (writerIdx !== -1 ? rowValues[writerIdx] : "Unknown Writer") || "Unknown Writer";
+      const illusLayout = (layoutIdx !== -1 ? rowValues[layoutIdx] : "Unassigned") || "Unassigned";
+      const graphicsIllus = (graphicsIdx !== -1 ? rowValues[graphicsIdx] : "") || "";
+      const onlineHandler = (onlineIdx !== -1 ? rowValues[onlineIdx] : "") || "";
+      const draftLink = (draftIdx !== -1 ? rowValues[draftIdx] : "") || "";
+      const addedToLayout = (addedIdx !== -1 ? rowValues[addedIdx] : "") || "No";
+      const sourceIssueRowId = `sheet-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 48) || Date.now()}`;
+
+      const existingIndex = updatedTasksList.findIndex(t =>
+        t.isPendingConfirmation && (
+          t.sourceIssueRowId === sourceIssueRowId ||
+          t.title.replace(/\s*\(Online Pubmat\)$/i, "").trim().toLowerCase() === title.toLowerCase()
+        )
+      );
+
+      if (existingIndex !== -1) {
+        // Row was EDITED: Sync attributes and trigger pending publication request in Online Pubmat
+        const ext = updatedTasksList[existingIndex];
+        updatedTasksList[existingIndex] = {
+          ...ext,
+          title,
+          typeOfContent,
+          writer,
+          illusLayout,
+          graphicsIllus: graphicsIllus || ext.graphicsIllus,
+          graphics: graphicsIllus || ext.graphics,
+          onlineHandler: onlineHandler || ext.onlineHandler,
+          progress: "Pending" as any,
+          isPendingConfirmation: true, // Dispatch request to Online Pubmat on edit!
+          draftLink: draftLink || ext.draftLink,
+          writeup: draftLink || ext.writeup,
+          addedToLayout: addedToLayout || ext.addedToLayout,
+          sourceIssueRowId: ext.sourceIssueRowId || sourceIssueRowId,
+          lastUpdated: new Date().toISOString()
+        };
+      } else {
+        // Completely NEW row added: Trigger pending Online Pubmat Entry
+        const newTask: Task = {
+          id: `sheet-t-${Date.now()}-${rowIdx}`,
+          title,
+          typeOfRelease: "Issue Article",
+          typeOfContent,
+          writer,
+          illusLayout,
+          graphicsIllus,
+          graphics: graphicsIllus,
+          onlineHandler,
+          progress: "Pending" as any,
+          priority: "Medium",
+          draftLink,
+          writeup: draftLink,
+          addedToLayout,
+          isPendingConfirmation: true, // Dispatches request to Online Pubmat!
+          sourceIssueRowId,
+          files: [],
+          commentsCount: 0,
+          revisionCount: 0,
+          lastUpdated: new Date().toISOString(),
+          releaseDate: "JULY 15"
+        };
+        updatedTasksList.push(newTask);
+      }
+      changed = true;
+    });
+
+    if (changed) onUpdateTasks(updatedTasksList);
+  };
+
+  const dispatchSingleRowToOnlinePubmat = (rowValues: string[], headers: string[]) => {
+    dispatchRowsToOnlinePubmat([rowValues], headers);
   };
 
   // Google Login / Logout
