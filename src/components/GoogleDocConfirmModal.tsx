@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Lock, Mail, CheckCircle2, AlertCircle, ShieldCheck, RefreshCw, X, FileText, User } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Lock, Mail, CheckCircle2, AlertCircle, ShieldCheck, RefreshCw, X, FileText, User, FolderOpen } from "lucide-react";
 import { TeamMember, normalizeEmail } from "../types";
 import { shareGoogleDocWithMember, isGoogleDocUrl, signInWithGoogleDrive, getCachedDriveToken } from "../lib/googleDriveShare";
 import { OFFICIAL_ACCOUNTS } from "./LoginPage";
@@ -8,6 +8,7 @@ interface GoogleDocConfirmModalProps {
   isOpen: boolean;
   taskTitle: string;
   docUrl: string;
+  driveUrl?: string;
   assignedMemberName: string;
   members: TeamMember[];
   onConfirm: (targetEmail: string) => Promise<void> | void;
@@ -39,13 +40,12 @@ export default function GoogleDocConfirmModal({
   isOpen,
   taskTitle,
   docUrl,
+  driveUrl = "",
   assignedMemberName,
   members,
   onConfirm,
   onCancel
 }: GoogleDocConfirmModalProps) {
-  if (!isOpen) return null;
-
   const initialEmail = findDirectoryEmail(assignedMemberName, members);
   const [email, setEmail] = useState(initialEmail || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -54,6 +54,45 @@ export default function GoogleDocConfirmModal({
   const [requiresAuth, setRequiresAuth] = useState(false);
 
   const isValidDoc = isGoogleDocUrl(docUrl);
+  const isValidDrive = Boolean(driveUrl) && isGoogleDocUrl(driveUrl);
+
+  // The modal stays mounted (isOpen toggles), so reset its state each time it is
+  // opened for a new assignment; otherwise the email/error from a previous task
+  // would leak into the next one. Hooks must run before any early return.
+  useEffect(() => {
+    if (isOpen) {
+      setEmail(findDirectoryEmail(assignedMemberName, members));
+      setErrorMessage("");
+      setRequiresAuth(false);
+      setIsSubmitting(false);
+      setIsSigningIn(false);
+    }
+  }, [isOpen, assignedMemberName, docUrl, driveUrl]);
+
+  // Grant the assigned member writer access to every Google link on the task.
+  // Each successful share fires Google Drive's own notification email, so the
+  // member receives the Docs and Drive links straight in their inbox.
+  const shareAllLinks = async (): Promise<{ ok: boolean; requiresAuth: boolean; message: string }> => {
+    const targets: Array<{ url: string; label: string }> = [];
+    if (isValidDoc) targets.push({ url: docUrl, label: "Google Doc" });
+    if (isValidDrive) targets.push({ url: driveUrl, label: "Google Drive" });
+
+    if (targets.length === 0) return { ok: true, requiresAuth: false, message: "" };
+
+    let needsAuth = false;
+    const failures: string[] = [];
+    for (const target of targets) {
+      const res = await shareGoogleDocWithMember(target.url, email, assignedMemberName, "writer");
+      if (!res.success) {
+        if (res.requiresAuth) needsAuth = true;
+        failures.push(`${target.label}: ${res.message}`);
+      }
+    }
+    if (failures.length > 0) {
+      return { ok: false, requiresAuth: needsAuth, message: failures.join("  |  ") };
+    }
+    return { ok: true, requiresAuth: false, message: "" };
+  };
 
   const handleGrantAndConfirm = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,14 +106,12 @@ export default function GoogleDocConfirmModal({
     setRequiresAuth(false);
 
     try {
-      if (isValidDoc && email) {
-        const shareRes = await shareGoogleDocWithMember(docUrl, email, assignedMemberName, "writer");
-        if (!shareRes.success) {
-          setErrorMessage(shareRes.message || "Failed to grant access via Google Drive API.");
-          setRequiresAuth(Boolean(shareRes.requiresAuth));
-          setIsSubmitting(false);
-          return;
-        }
+      const share = await shareAllLinks();
+      if (!share.ok) {
+        setErrorMessage(share.message || "Failed to grant access via Google Drive API.");
+        setRequiresAuth(share.requiresAuth);
+        setIsSubmitting(false);
+        return;
       }
 
       await onConfirm(email);
@@ -101,12 +138,12 @@ export default function GoogleDocConfirmModal({
       const auth = await signInWithGoogleDrive();
       if (auth?.accessToken) {
         setRequiresAuth(false);
-        // Automatically proceed after sign-in
-        const shareRes = await shareGoogleDocWithMember(docUrl, email, assignedMemberName, "writer");
-        if (shareRes.success) {
+        const share = await shareAllLinks();
+        if (share.ok) {
           await onConfirm(email);
         } else {
-          setErrorMessage(shareRes.message);
+          setErrorMessage(share.message);
+          setRequiresAuth(share.requiresAuth);
         }
       }
     } catch (err: any) {
@@ -115,6 +152,8 @@ export default function GoogleDocConfirmModal({
       setIsSigningIn(false);
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fadeIn">
@@ -156,7 +195,9 @@ export default function GoogleDocConfirmModal({
 
             {docUrl && (
               <div className="pt-2 border-t border-stone-200/80 flex items-center justify-between text-[11px]">
-                <span className="font-semibold text-stone-500">Document Link:</span>
+                <span className="font-semibold text-stone-500 flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-stone-400" /> Document Link:
+                </span>
                 <a
                   href={docUrl}
                   target="_blank"
@@ -164,6 +205,22 @@ export default function GoogleDocConfirmModal({
                   className="font-mono text-brand-maroon hover:underline font-bold truncate max-w-[240px]"
                 >
                   {docUrl}
+                </a>
+              </div>
+            )}
+
+            {driveUrl && (
+              <div className="pt-2 border-t border-stone-200/80 flex items-center justify-between text-[11px]">
+                <span className="font-semibold text-stone-500 flex items-center gap-1.5">
+                  <FolderOpen className="w-3.5 h-3.5 text-stone-400" /> Drive Link:
+                </span>
+                <a
+                  href={driveUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono text-brand-maroon hover:underline font-bold truncate max-w-[240px]"
+                >
+                  {driveUrl}
                 </a>
               </div>
             )}

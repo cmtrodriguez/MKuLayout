@@ -1,7 +1,6 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
-import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import { createClient } from "@supabase/supabase-js";
 
@@ -76,6 +75,7 @@ async function ensureSupabaseStateSeed() {
 }
 
 const app = express();
+export { app };
 const DEFAULT_PORT = Number(process.env.PORT || 3000);
 
 app.use(express.json({ limit: "50mb" }));
@@ -781,6 +781,9 @@ Return STRICT JSON matching this schema:
 // Vite Middleware for client asset serving and index.html fallbacks
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
+    // Vite is a dev-only dependency; import it lazily so the production bundle
+    // (and the Vercel serverless function that reuses `app`) never loads it.
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
@@ -814,4 +817,8 @@ async function startServer() {
   listenOnPort(DEFAULT_PORT);
 }
 
-startServer();
+// Only bind a port when running as a standalone Node server. On Vercel the
+// Express `app` is imported by api/index.ts and driven by the serverless runtime.
+if (!process.env.VERCEL) {
+  startServer();
+}

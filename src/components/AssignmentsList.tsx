@@ -9,7 +9,7 @@ import { Task, TeamMember } from "../types";
 import { getAllCanvaTemplates, extractHyperlinkDetails } from "../lib/canvaTemplates";
 import GoogleDocShareWidget from "./GoogleDocShareWidget";
 import GoogleDocConfirmModal from "./GoogleDocConfirmModal";
-import { shareGoogleDocWithMember } from "../lib/googleDriveShare";
+import { shareGoogleDocWithMember, isGoogleDocUrl } from "../lib/googleDriveShare";
 import { fetchGoogleDocTitle, extractDocInputDetails } from "../lib/googleDocTitle";
 
 import { OFFICIAL_MEMBERS_MAP, getOfficialDisplayName, getPreferredFirstName, resolveLayoutAssignee } from "../lib/memberUtils";
@@ -101,6 +101,7 @@ export default function AssignmentsList({
     task: Task;
     activeForm: Task;
     docUrl: string;
+    driveUrl: string;
     assignedName: string;
   } | null>(null);
 
@@ -204,6 +205,23 @@ export default function AssignmentsList({
 
   const handleConfirmAndDispatch = (task: Task) => {
     const activeForm = (editingTaskId === task.id && editForm ? { ...task, ...editForm } : task) as Task;
+
+    // Resolve the Google Docs link and the Google Drive link the assignee needs.
+    // Dispatching must first grant the assigned layout member access to both
+    // (they start with none) and email the links, so route through the confirm
+    // modal whenever there is an assignee and at least one Google link.
+    const assignedName = activeForm.illusLayout || "Unassigned";
+    const docUrl = extractDocInputDetails(activeForm.draftLink || activeForm.addedToLayout || "").url
+      || activeForm.draftLink || "";
+    const driveUrl = extractDocInputDetails(activeForm.pubmatLink || "").url || activeForm.pubmatLink || "";
+    const hasAssignee = Boolean(assignedName && assignedName !== "Unassigned");
+    const hasGoogleLink = isGoogleDocUrl(docUrl) || isGoogleDocUrl(driveUrl);
+
+    if (hasAssignee && hasGoogleLink) {
+      setConfirmModalData({ task, activeForm, docUrl, driveUrl, assignedName });
+      return;
+    }
+
     executeDispatch(task, activeForm);
   };
 
@@ -1055,6 +1073,7 @@ export default function AssignmentsList({
         isOpen={Boolean(confirmModalData)}
         taskTitle={confirmModalData?.activeForm.title || ""}
         docUrl={confirmModalData?.docUrl || ""}
+        driveUrl={confirmModalData?.driveUrl || ""}
         assignedMemberName={confirmModalData?.assignedName || ""}
         members={members}
         onConfirm={async () => {

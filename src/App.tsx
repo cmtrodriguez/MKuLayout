@@ -19,11 +19,12 @@ import QuickAccessHub from "./components/QuickAccessHub";
 import ProfileSettings from "./components/ProfileSettings";
 import { LayoutStaffDashboard, EicDashboard } from "./components/RoleDashboards";
 import { CanvaDirectory } from "./components/CanvaDirectory";
+import SheetsSync from "./components/SheetsSync";
 import { OFFICIAL_MEMBERS_MAP, getPreferredFirstName, resolveLayoutAssignee, resolveMemberEmail, getEditorDeputyEmails } from "./lib/memberUtils";
 import { AccentTheme, applyAccentCssVars } from "./lib/accentTheme";
 import { seededUuid } from "./lib/seededUuid";
 import { getPubmatCanvaTemplates } from "./lib/canvaTemplates";
-import { supabase, fetchUserProfileByEmail, fetchTasks, fetchMembers, fetchComments, fetchCalendarEvents, fetchPolls, fetchAnnouncements, fetchNotifications, fetchIssueSheets, upsertTask, deleteTask, upsertMember, createComment, upsertCalendarEvent, deleteCalendarEvent, createPoll, updatePollOptionVotes, deletePoll, createNotification, markNotificationRead, createAnnouncement, saveIssueSheets, subscribeToLayoutRealtime } from "./lib/supabase";
+import { supabase, fetchUserProfileByEmail, fetchTasks, fetchMembers, fetchComments, fetchCalendarEvents, fetchPolls, fetchAnnouncements, fetchNotifications, fetchIssueSheets, upsertTask, deleteTask, upsertMember, createComment, upsertCalendarEvent, deleteCalendarEvent, createPoll, updatePollOptionVotes, deletePoll, createNotification, markNotificationRead, createAnnouncement, saveIssueSheets, fetchConfig, saveConfig, subscribeToLayoutRealtime } from "./lib/supabase";
 import mkuleImg from "./mkule.png";
 
 // Domain Models
@@ -114,6 +115,21 @@ export default function App() {
     const isOnlineOnlyCompanion = task.title.includes("(Online Pubmat)") || task.typeOfRelease === "Online Article";
     return isIssueTask && !isOnlineOnlyCompanion;
   });
+
+  // Master Google Sheets link backing the Issue Pages live viewer/editor. Shared
+  // across every account via app_state so the whole desk edits the same spreadsheet.
+  const [googleSheetsLink, setGoogleSheetsLink] = useState<string>(() => {
+    try {
+      return localStorage.getItem("mkule_google_sheets_link") || "";
+    } catch {
+      return "";
+    }
+  });
+  const updateGoogleSheetsLink = (link: string) => {
+    setGoogleSheetsLink(link);
+    try { localStorage.setItem("mkule_google_sheets_link", link); } catch { /* ignore */ }
+    saveConfig({ googleSheetsLink: link }).catch(() => {});
+  };
 
   // Accessibility State (Passed to Panel)
   const [highContrast, setHighContrast] = useState(false);
@@ -249,7 +265,7 @@ export default function App() {
   // Fetch all app data from Supabase and initialise local state
   const fetchAllState = async () => {
     try {
-      const [sbTasks, sbMembers, sbComments, sbEvents, sbPolls, sbAnnouncements, sbNotifications, sbIssueSheets] = await Promise.all([
+      const [sbTasks, sbMembers, sbComments, sbEvents, sbPolls, sbAnnouncements, sbNotifications, sbIssueSheets, sbConfig] = await Promise.all([
         fetchTasks(),
         fetchMembers(),
         fetchComments(),
@@ -257,7 +273,8 @@ export default function App() {
         fetchPolls(),
         fetchAnnouncements(),
         fetchNotifications(),
-        fetchIssueSheets()
+        fetchIssueSheets(),
+        fetchConfig()
       ]);
 
       setTasks(tagTasksWithSourceRows(sbTasks, (sbIssueSheets && sbIssueSheets.length > 0) ? sbIssueSheets : issueSheetsRef.current));
@@ -272,6 +289,11 @@ export default function App() {
         setIssueSheets(sbIssueSheets);
         issueSheetsRef.current = sbIssueSheets;
         localStorage.setItem("mkule_issue_publication_sheets", JSON.stringify(sbIssueSheets));
+      }
+
+      if (sbConfig && typeof sbConfig.googleSheetsLink === "string" && sbConfig.googleSheetsLink) {
+        setGoogleSheetsLink(sbConfig.googleSheetsLink);
+        localStorage.setItem("mkule_google_sheets_link", sbConfig.googleSheetsLink);
       }
     } catch (err) {
       // Fall back to legacy /api/state if Supabase not available
@@ -316,6 +338,12 @@ export default function App() {
           setIssueSheets(data);
           issueSheetsRef.current = data;
           localStorage.setItem("mkule_issue_publication_sheets", JSON.stringify(data));
+        }
+      },
+      onConfigChange: (data) => {
+        if (data && typeof data.googleSheetsLink === "string") {
+          setGoogleSheetsLink(data.googleSheetsLink);
+          localStorage.setItem("mkule_google_sheets_link", data.googleSheetsLink);
         }
       }
     });
@@ -406,6 +434,19 @@ export default function App() {
   const handleUpdateMembers = (newMembers: TeamMember[]) => {
     setMembers(newMembers);
     newMembers.forEach(m => upsertMember(m).catch(() => {}));
+  };
+
+  // SheetsSync emits pending tasks with lightweight ids (e.g. `sheet-t-<ts>`) that
+  // are not DB UUIDs, so persistTaskDiff would skip them: they'd vanish on refresh
+  // and never reach other accounts. Re-key them to a deterministic UUID derived
+  // from the source row so they persist and sync like every other task.
+  const handleSheetsSyncTasks = (nextTasks: Task[]) => {
+    const normalized = nextTasks.map((t) => {
+      if (isDbId(t.id)) return t;
+      const basis = t.sourceIssueRowId || t.title || t.id;
+      return { ...t, id: seededUuid(`sheet-pending-${basis}`) };
+    });
+    handleUpdateTasks(normalized);
   };
 
   const handleUpdateEvents = (newEvents: CalendarEvent[]) => {
@@ -1487,296 +1528,16 @@ export default function App() {
             )}
 
             {activeTab === "issue-publication" && userRole === "Layout Editor" && (
-              <div className="bg-white dark:bg-neutral-900 rounded-[28px] p-3 sm:p-4 md:p-5 border border-neutral-200/60 dark:border-neutral-800 shadow-sm space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-neutral-100 dark:border-neutral-800">
-                  <div>
-                    <h3 className="font-sans font-black text-neutral-900 dark:text-neutral-100 text-base sm:text-lg flex items-center gap-2">
-                      <BookOpen className="w-4 h-4 text-brand-maroon" />
-                      Issue Pages
-                    </h3>
-                    <p className="text-[10px] sm:text-xs text-neutral-500 dark:text-neutral-400">
-                      Manual publication planning sheet for issue assignment and tracking.
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={addIssueSheet}
-                      className="px-3 py-1.5 bg-neutral-900 hover:bg-neutral-700 text-white text-[10px] sm:text-xs font-bold rounded-xl cursor-pointer"
-                    >
-                      + Add Another Sheet
-                    </button>
-                    <button
-                      type="button"
-                      onClick={addIssueRow}
-                      className="px-3 py-1.5 bg-brand-maroon hover:bg-brand-maroon-dark text-white text-[10px] sm:text-xs font-bold rounded-xl cursor-pointer"
-                    >
-                      + Add Row
-                    </button>
-                  </div>
-                </div>
-
-                <div className="bg-neutral-50 dark:bg-neutral-800 rounded-2xl border border-neutral-200 dark:border-neutral-700 p-3 space-y-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {issueSheets.map((sheet) => (
-                      <div key={sheet.id} className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => setCurrentIssueSheetId(sheet.id)}
-                          className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${
-                            sheet.id === currentIssueSheetId
-                              ? "bg-brand-maroon text-white border-brand-maroon"
-                              : "bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-200 border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800"
-                          }`}
-                        >
-                          {sheet.title}
-                        </button>
-                        {issueSheets.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => deleteIssueSheet(sheet.id)}
-                            className="w-5 h-5 rounded-full bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-200 hover:bg-red-100 dark:hover:bg-red-900/40 hover:text-red-600 text-[10px] font-bold cursor-pointer"
-                            aria-label={`Delete sheet ${sheet.title}`}
-                          >
-                            ×
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  <label className="block text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-500 dark:text-neutral-400 mb-1">
-                    Sheet title
-                  </label>
-                  <input
-                    type="text"
-                    value={issueSheetTitle}
-                    onChange={(e) => updateIssueSheets((prev) => prev.map((sheet) => (
-                      sheet.id === currentIssueSheetId ? { ...sheet, title: e.target.value } : sheet
-                    )))}
-                    className="w-full px-3 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl text-xs outline-none"
-                  />
-                </div>
-
-                <div className="overflow-x-auto rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800">
-                  <div className="min-w-[920px]">
-                    <div className="grid grid-cols-[0.8fr_1.6fr_2.3fr_1.3fr_1.1fr_1.1fr_1.1fr_1.1fr] bg-brand-maroon text-white text-[10px] font-black uppercase tracking-[0.12em]">
-                      <div className="px-2 py-2 border-r border-red-900/60">Page</div>
-                      <div className="px-2 py-2 border-r border-red-900/60">Section or Content</div>
-                      <div className="px-2 py-2 border-r border-red-900/60">Title or Summary</div>
-                      <div className="px-2 py-2 border-r border-red-900/60">Writer</div>
-                      <div className="px-2 py-2 border-r border-red-900/60">Graphics</div>
-                      <div className="px-2 py-2 border-r border-red-900/60">Layout</div>
-                      <div className="px-2 py-2 border-r border-red-900/60">Online</div>
-                      <div className="px-2 py-2 text-center">Progress</div>
-                    </div>
-
-                    {issueRows.length === 0 ? (
-                      <div className="p-5 text-center text-[11px] text-neutral-400 dark:text-neutral-500 bg-white dark:bg-neutral-900">
-                        No publication rows yet.
-                      </div>
-                    ) : (
-                      issueRows.map((row) => (
-                        <div key={row.id} className="grid grid-cols-[0.8fr_1.6fr_2.3fr_1.3fr_1.1fr_1.1fr_1.1fr_1.1fr] border-b last:border-b-0 border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-[11px]">
-                          <button
-                            type="button"
-                            onClick={() => openIssueRowEditor(row)}
-                            className="w-full px-2 py-2 border-r border-neutral-200 dark:border-neutral-700 bg-transparent text-left font-medium text-neutral-700 dark:text-neutral-200 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800"
-                          >
-                            {row.page || "—"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => openIssueRowEditor(row)}
-                            className="w-full px-2 py-2 border-r border-neutral-200 dark:border-neutral-700 bg-transparent text-left font-medium text-neutral-700 dark:text-neutral-200 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800"
-                          >
-                            {row.section || "—"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => openIssueRowEditor(row)}
-                            className="w-full px-2 py-2 border-r border-neutral-200 dark:border-neutral-700 bg-transparent text-left font-medium text-neutral-700 dark:text-neutral-200 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800"
-                          >
-                            {row.title || "—"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => openIssueRowEditor(row)}
-                            className="w-full px-2 py-2 border-r border-neutral-200 dark:border-neutral-700 bg-transparent text-left font-medium text-neutral-700 dark:text-neutral-200 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800"
-                          >
-                            {row.writer || "—"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => openIssueRowEditor(row)}
-                            className="w-full px-2 py-2 border-r border-neutral-200 dark:border-neutral-700 bg-transparent text-left font-medium text-neutral-700 dark:text-neutral-200 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800"
-                          >
-                            {row.graphics || "—"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => openIssueRowEditor(row)}
-                            className="w-full px-2 py-2 border-r border-neutral-200 dark:border-neutral-700 bg-transparent text-left font-medium text-neutral-700 dark:text-neutral-200 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800"
-                          >
-                            {row.layout || "—"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => openIssueRowEditor(row)}
-                            className="w-full px-2 py-2 border-r border-neutral-200 dark:border-neutral-700 bg-transparent text-left font-medium text-neutral-700 dark:text-neutral-200 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800"
-                          >
-                            {row.online || "—"}
-                          </button>
-                          <div className="flex items-center justify-between gap-1 px-1 py-1">
-                            <span className="px-1.5 py-1 rounded-md bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-[10px] font-semibold text-neutral-700 dark:text-neutral-200">
-                              {row.progress || "Pending"}
-                            </span>
-                            {confirmDeleteRowId === row.id ? (
-                              <span className="flex items-center gap-1 ml-1">
-                                <span className="text-[9px] font-bold text-red-600 dark:text-red-400 whitespace-nowrap">Are you sure?</span>
-                                <button
-                                  type="button"
-                                  onClick={() => { deleteIssueRow(row.id); setConfirmDeleteRowId(null); }}
-                                  className="px-1.5 py-0.5 rounded-md bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold cursor-pointer"
-                                  title="Confirm remove row"
-                                >
-                                  Yes
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setConfirmDeleteRowId(null)}
-                                  className="px-1.5 py-0.5 rounded-md bg-neutral-200 dark:bg-neutral-700 hover:bg-neutral-300 dark:hover:bg-neutral-600 text-neutral-700 dark:text-neutral-200 text-[10px] font-bold cursor-pointer"
-                                  title="Cancel"
-                                >
-                                  No
-                                </button>
-                              </span>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => setConfirmDeleteRowId(row.id)}
-                                className="text-neutral-400 hover:text-red-600 text-xs cursor-pointer ml-1"
-                                title="Remove row"
-                              >
-                                ✕
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                <div className="bg-neutral-50 dark:bg-neutral-800 rounded-2xl border border-neutral-200 dark:border-neutral-700 p-3 space-y-3">
-                  <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-700 pb-2">
-                    <div>
-                      <h4 className="font-sans font-black text-neutral-900 dark:text-neutral-100 text-sm">Issue Tasks</h4>
-                      <p className="text-[10px] text-neutral-500 dark:text-neutral-400">Issue-only tasks that are dispatched from the publication planner and assigned to the layout team.</p>
-                    </div>
-                    <span className="text-[10px] font-bold bg-brand-maroon/10 text-brand-maroon dark:text-brand-maroon-light px-2 py-1 rounded-full">
-                      {issueTaskCards.length} task{issueTaskCards.length === 1 ? "" : "s"}
-                    </span>
-                  </div>
-
-                  {issueTaskCards.length === 0 ? (
-                    <div className="p-5 text-center text-[11px] text-neutral-400 dark:text-neutral-500 bg-white dark:bg-neutral-900 rounded-xl border border-dashed border-neutral-200 dark:border-neutral-700">
-                      No issue tasks yet. Save or dispatch a publication task to see it here.
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-2.5">
-                      {issueTaskCards.map((task) => (
-                        <div
-                          key={task.id}
-                          className="bg-white dark:bg-neutral-900 hover:shadow-md rounded-xl sm:rounded-2xl p-3.5 sm:p-5 border border-neutral-200 dark:border-neutral-700 flex flex-col justify-between space-y-2.5 sm:space-y-4 text-left transition-all"
-                        >
-                          <div className="space-y-2 sm:space-y-3">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[9px] sm:text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-brand-maroon/5 dark:bg-brand-maroon/20 text-brand-maroon dark:text-brand-maroon-light border border-brand-maroon/10 dark:border-brand-maroon/30">
-                                {task.typeOfRelease || "Issue Article"}
-                              </span>
-                              <span className={`text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded ${
-                                task.priority === "Urgent" ? "bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800" :
-                                task.priority === "High" ? "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800" :
-                                task.priority === "Medium" ? "bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800" :
-                                "bg-gray-100 dark:bg-neutral-800 text-gray-700 dark:text-neutral-300 border border-gray-200 dark:border-neutral-700"
-                              }`}>
-                                {task.priority || "Medium"} Priority
-                              </span>
-                            </div>
-
-                            <div>
-                              <h4
-                                className="font-bold text-gray-950 dark:text-neutral-100 text-xs sm:text-sm leading-snug hover:text-brand-maroon dark:hover:text-red-400 cursor-pointer transition-all"
-                                onClick={() => setSelectedTask(task)}
-                              >
-                                {task.title}
-                              </h4>
-                              <p className="text-[9px] sm:text-[10px] text-gray-400 dark:text-neutral-400 mt-0.5 font-mono">ID: {task.writeup || task.title || "Drafting"}</p>
-                            </div>
-
-                            {task.canvaLink && (
-                              <div className="bg-cyan-50/60 dark:bg-cyan-950/40 border border-cyan-100 dark:border-cyan-800 p-1.5 sm:p-2 rounded-lg sm:rounded-xl flex items-center justify-between gap-2 text-[10px]">
-                                <span className="text-cyan-800 dark:text-cyan-300 font-medium truncate block flex-1 font-mono text-[9px] sm:text-[10px]">
-                                  {task.canvaLink}
-                                </span>
-                                <a
-                                  href={task.canvaLink}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="px-2 py-0.5 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-lg text-[8px] sm:text-[9px] flex items-center gap-0.5 shrink-0"
-                                >
-                                  Canva <ExternalLink className="w-2.5 h-2.5" />
-                                </a>
-                              </div>
-                            )}
-
-                            <div className="grid grid-cols-2 gap-1.5 sm:gap-2 pt-1.5 sm:pt-2 border-t border-gray-100 dark:border-neutral-800 text-[11px] sm:text-xs">
-                              <div>
-                                <span className="text-[9px] sm:text-[10px] text-gray-400 dark:text-neutral-400 uppercase font-semibold block">Writer</span>
-                                <span className="font-bold text-gray-700 dark:text-neutral-200 truncate block">{task.writer || "Unspecified"}</span>
-                              </div>
-                              <div>
-                                <span className="text-[9px] sm:text-[10px] text-gray-400 dark:text-neutral-400 uppercase font-semibold block">Layout Artist</span>
-                                <span className="font-bold text-gray-700 dark:text-neutral-200 truncate block flex items-center gap-1">
-                                  <User className="w-3 h-3 text-brand-maroon dark:text-brand-maroon-light shrink-0" />
-                                  <span className="truncate">{task.illusLayout || "Unassigned"}</span>
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="pt-2 sm:pt-3 border-t border-gray-100 dark:border-neutral-800 flex items-center justify-between gap-2 sm:gap-3 text-xs">
-                            <div>
-                              <span className="text-[8px] sm:text-[9px] text-gray-400 dark:text-neutral-400 font-semibold uppercase block mb-0.5 sm:mb-1">Update Status</span>
-                              <select
-                                value={task.progress}
-                                onChange={(e) => handleUpdateTasks(tasks.map(t => t.id === task.id ? { ...t, progress: e.target.value as Task["progress"], lastUpdated: new Date().toISOString() } : t))}
-                                className="px-2 sm:px-2.5 py-1 border border-gray-200 dark:border-neutral-700 rounded-lg text-[11px] sm:text-xs outline-none cursor-pointer bg-white dark:bg-neutral-800 text-gray-700 dark:text-neutral-200 focus:ring-2 focus:ring-brand-maroon"
-                              >
-                                <option value="Not Started">Not Started</option>
-                                <option value="Assigned">Assigned</option>
-                                <option value="In Progress">In Progress</option>
-                                <option value="For Review">For Review</option>
-                                <option value="Revision Needed">Revision Needed</option>
-                                <option value="Completed">Completed</option>
-                              </select>
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={() => setSelectedTask(task)}
-                              className="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-neutral-50 dark:bg-neutral-800 hover:bg-brand-maroon dark:hover:bg-brand-maroon text-brand-maroon dark:text-brand-maroon-light hover:text-white dark:hover:text-white border border-brand-maroon/20 dark:border-neutral-700 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
-                            >
-                              Workspace <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
+              <SheetsSync
+                tasks={tasks}
+                members={members}
+                speechEnabled={speechEnabled}
+                currentUserRole={userRole}
+                onUpdateTasks={handleSheetsSyncTasks}
+                onUpdateMembers={handleUpdateMembers}
+                googleSheetsLink={googleSheetsLink}
+                onUpdateGoogleSheetsLink={updateGoogleSheetsLink}
+              />
             )}
 
             {activeTab === "online-pubmat" && (

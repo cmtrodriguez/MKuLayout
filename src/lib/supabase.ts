@@ -682,6 +682,34 @@ export async function saveIssueSheets(sheets: any[]): Promise<boolean> {
   return true;
 }
 
+// Shared app configuration (e.g. the master Google Sheets link used by the
+// Issue Pages live editor). Stored as a single JSON blob so every account and
+// device reads the same value.
+export async function fetchConfig(): Promise<Record<string, any> | null> {
+  if (!supabase) return null;
+  const { data, error } = await supabase.from("app_state").select("data").eq("id", "app_config").maybeSingle();
+  if (error && error.code !== "PGRST116") {
+    console.warn("App config fetch failed:", error.message);
+    return null;
+  }
+  if (!data?.data) return null;
+  return typeof data.data === "object" && !Array.isArray(data.data) ? data.data : null;
+}
+
+export async function saveConfig(config: Record<string, any>): Promise<boolean> {
+  if (!supabase) return false;
+  const { error } = await supabase.from("app_state").upsert({
+    id: "app_config",
+    data: config,
+    updated_at: new Date().toISOString()
+  });
+  if (error) {
+    console.error("Error saving app config to app_state:", error.message);
+    return false;
+  }
+  return true;
+}
+
 // ============================================================================
 // REALTIME SUBSCRIPTION MANAGER
 // ============================================================================
@@ -696,6 +724,7 @@ export interface RealtimeHandlers {
   onAnnouncementsChange?: () => void;
   onMembersChange?: () => void;
   onIssueSheetsChange?: (data: any) => void;
+  onConfigChange?: (data: any) => void;
 }
 
 export function subscribeToLayoutRealtime(handlers: RealtimeHandlers): () => void {
@@ -735,6 +764,9 @@ export function subscribeToLayoutRealtime(handlers: RealtimeHandlers): () => voi
     .on("postgres_changes", { event: "*", schema: "public", table: "app_state" }, (payload) => {
       if (payload.new && (payload.new as any).id === "issue_sheets") {
         handlers.onIssueSheetsChange?.((payload.new as any).data);
+      }
+      if (payload.new && (payload.new as any).id === "app_config") {
+        handlers.onConfigChange?.((payload.new as any).data);
       }
     });
 
