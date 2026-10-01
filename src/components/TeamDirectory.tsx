@@ -90,7 +90,10 @@ export default function TeamDirectory({
       );
     });
 
-    const calculatedSemPubs = staffTasks.length + (existing?.currentSemPubs || 0);
+    // Derive purely from completed tasks. Never add the stored currentSemPubs:
+    // handleSaveSchedule persists effectiveMembers for everyone, so adding the
+    // prior stored value would compound the count on each availability edit.
+    const calculatedSemPubs = staffTasks.length;
 
     return {
       id: existing ? existing.id : String(idx + 1),

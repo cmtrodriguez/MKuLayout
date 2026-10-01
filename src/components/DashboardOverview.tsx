@@ -137,7 +137,10 @@ export default function DashboardOverview({
   // "My Layout Assignments" must list only tasks assigned to the signed-in
   // account — staff, probi, editor, and deputy alike. The editor/deputy used
   // to get a raw slice of every task, leaking other members' assignments here.
-  const displayTasks = isStaffOrProbi ? staffAssignedTasks : staffAssignedTasks.slice(0, 4);
+  // Fully completed/approved work is hidden here and lives only in the Task Archive.
+  const isDone = (t: Task) => t.progress === "Completed" || t.progress === "Approved" || t.progress === "Archived";
+  const displayTasks = (isStaffOrProbi ? staffAssignedTasks : staffAssignedTasks.slice(0, 4))
+    .filter(t => !isDone(t));
 
   const getTaskProgress = (task: Task) => {
     switch (task.progress) {

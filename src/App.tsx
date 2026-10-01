@@ -46,6 +46,13 @@ export default function App() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Live clock for the Desk Active Console header (ticks every second).
+  const [currentDateTime, setCurrentDateTime] = useState<Date>(() => new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentDateTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   // User Authentication & Role States
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState<UserRole>("Layout Staff Member");
@@ -109,11 +116,23 @@ export default function App() {
   const currentIssueSheet = issueSheets.find((sheet) => sheet.id === currentIssueSheetId) ?? issueSheets[0];
   const issueRows = currentIssueSheet?.rows ?? [];
   const issueSheetTitle = currentIssueSheet?.title ?? "Issue Pages Sheet";
-  const issueTaskCards = tasks.filter((task) => {
-    const isIssueTask = task.typeOfRelease === "Issue Article" || (task as any).sourceIssueRowId;
-    const isOnlineOnlyCompanion = task.title.includes("(Online Pubmat)") || task.typeOfRelease === "Online Article";
-    return isIssueTask && !isOnlineOnlyCompanion;
-  });
+
+  // Issue tasks are scoped to the currently selected sheet: a task belongs to a
+  // sheet only when it was dispatched from one of that sheet's rows. A freshly
+  // added sheet has no rows yet, so its Issue Tasks section starts blank.
+  const currentSheetRowIds = new Set(issueRows.map((row) => row.id));
+  const isCompletedTask = (task: Task) =>
+    task.progress === "Completed" || task.progress === "Approved" || task.progress === "Archived";
+  const issueTaskCards = tasks
+    .filter((task) => {
+      const isOnlineOnlyCompanion = task.title.includes("(Online Pubmat)") || task.typeOfRelease === "Online Article";
+      if (isOnlineOnlyCompanion) return false;
+      const rowId = (task as any).sourceIssueRowId;
+      return !!rowId && currentSheetRowIds.has(rowId);
+    })
+    // Assigned/pending tasks surface on top; completed ones stay listed but sink
+    // to the bottom (they are greyed out in the card markup below).
+    .sort((a, b) => Number(isCompletedTask(a)) - Number(isCompletedTask(b)));
 
   // Accessibility State (Passed to Panel)
   const [highContrast, setHighContrast] = useState(false);
@@ -211,12 +230,15 @@ export default function App() {
           const isLayoutMember = type === "layout" || role.includes("layout") || role.includes("deputy") || role.includes("staffer") || role.includes("probi");
           if (!isLayoutMember) return false;
 
-          if (userRole === "Layout Editor") {
-            return role.includes("deputy") || role.includes("staffer") || role.includes("probi");
-          }
-
-          if (userRole === "Layout Deputy") {
-            return role.includes("editor") || role.includes("staffer") || role.includes("probi");
+          if (userRole === "Layout Editor" || userRole === "Layout Deputy") {
+            // Include both the editor and deputy (alongside staffers/probis) so
+            // either lead can assign a task to themselves.
+            return (
+              role.includes("editor") ||
+              role.includes("deputy") ||
+              role.includes("staffer") ||
+              role.includes("probi")
+            );
           }
 
           return false;
@@ -1347,6 +1369,20 @@ export default function App() {
           {/* Right actions: Theme toggle, Accessibility controls & Alerts dropdown */}
           <div className="flex items-center gap-1.5 sm:gap-3 w-full sm:w-auto justify-end">
 
+            {/* Live current date & time */}
+            <div
+              className="px-2.5 py-1.5 bg-neutral-50 dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 text-right shadow-xs select-none"
+              title="Current date and time"
+              aria-label={`Current date and time ${currentDateTime.toLocaleString()}`}
+            >
+              <p className="font-mono text-[11px] sm:text-xs font-bold text-neutral-800 dark:text-neutral-100 leading-tight tabular-nums">
+                {currentDateTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+              </p>
+              <p className="font-mono text-[9px] sm:text-[10px] text-neutral-500 dark:text-neutral-400 leading-tight">
+                {currentDateTime.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
+              </p>
+            </div>
+
             {/* Direct Theme Toggle Button */}
             <button
               type="button"
@@ -1685,10 +1721,16 @@ export default function App() {
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-2.5">
-                      {issueTaskCards.map((task) => (
+                      {issueTaskCards.map((task) => {
+                        const isDone = isCompletedTask(task);
+                        return (
                         <div
                           key={task.id}
-                          className="bg-white dark:bg-neutral-900 hover:shadow-md rounded-xl sm:rounded-2xl p-3.5 sm:p-5 border border-neutral-200 dark:border-neutral-700 flex flex-col justify-between space-y-2.5 sm:space-y-4 text-left transition-all"
+                          className={`rounded-xl sm:rounded-2xl p-3.5 sm:p-5 flex flex-col justify-between space-y-2.5 sm:space-y-4 text-left transition-all border ${
+                            isDone
+                              ? "opacity-55 bg-neutral-50 dark:bg-neutral-900/50 border-neutral-200 dark:border-neutral-800 hover:opacity-90"
+                              : "bg-white dark:bg-neutral-900 hover:shadow-md border-neutral-200 dark:border-neutral-700"
+                          }`}
                         >
                           <div className="space-y-2 sm:space-y-3">
                             <div className="flex items-center justify-between">
@@ -1772,7 +1814,8 @@ export default function App() {
                             </button>
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>

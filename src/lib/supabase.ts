@@ -683,6 +683,65 @@ export async function saveIssueSheets(sheets: any[]): Promise<boolean> {
 }
 
 // ============================================================================
+// CANVA TEMPLATE DIRECTORY (shared team state via app_state)
+// ============================================================================
+
+export interface CanvaDirectoryState {
+  links: Record<string, string>;
+  custom: Array<{ id: string; name: string; category: string; defaultLink: string; isCustom?: boolean }>;
+  removed: string[];
+}
+
+function normalizeCanvaState(d: any): CanvaDirectoryState {
+  return {
+    links: d && typeof d.links === "object" && d.links ? d.links : {},
+    custom: d && Array.isArray(d.custom) ? d.custom : [],
+    removed: d && Array.isArray(d.removed) ? d.removed : []
+  };
+}
+
+export async function fetchCanvaState(): Promise<CanvaDirectoryState | null> {
+  if (!supabase) return null;
+  const { data, error } = await supabase.from("app_state").select("data").eq("id", "canva_templates").maybeSingle();
+  if (error && error.code !== "PGRST116") {
+    console.warn("Canva templates fetch failed:", error.message);
+    return null;
+  }
+  if (!data?.data || typeof data.data !== "object") return null;
+  return normalizeCanvaState(data.data);
+}
+
+export async function saveCanvaState(state: CanvaDirectoryState): Promise<boolean> {
+  if (!supabase) return false;
+  const { error } = await supabase.from("app_state").upsert({
+    id: "canva_templates",
+    data: state,
+    updated_at: new Date().toISOString()
+  });
+  if (error) {
+    console.error("Error saving canva templates to app_state:", error.message);
+    return false;
+  }
+  return true;
+}
+
+export function subscribeToCanvaState(onChange: (state: CanvaDirectoryState) => void): () => void {
+  if (!supabase) return () => {};
+  const channelName = `mkule-canva-${Math.random().toString(36).substring(2, 9)}`;
+  const channel: RealtimeChannel = supabase.channel(channelName);
+  channel.on("postgres_changes", { event: "*", schema: "public", table: "app_state" }, (payload) => {
+    const rec = payload.new as any;
+    if (rec && rec.id === "canva_templates" && rec.data) {
+      onChange(normalizeCanvaState(rec.data));
+    }
+  });
+  channel.subscribe();
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}
+
+// ============================================================================
 // REALTIME SUBSCRIPTION MANAGER
 // ============================================================================
 

@@ -52,8 +52,13 @@ export function LayoutStaffDashboard({
     speakText("Comment sent to editor.");
   };
 
+  // Fully completed/approved assignments are hidden from "My Assignments"; they
+  // live only in the member's Task Archive (Profile & Settings).
+  const isDoneTask = (t: Task) =>
+    t.progress === "Completed" || t.progress === "Approved" || t.progress === "Archived";
+
   const myTasks = tasks.filter(t =>
-    !t.isPendingConfirmation && isUserAssignedToTask(t, currentUserName, currentUserEmail)
+    !t.isPendingConfirmation && !isDoneTask(t) && isUserAssignedToTask(t, currentUserName, currentUserEmail)
   );
   const issueTasks = myTasks.filter(t =>
     t.typeOfRelease === "Issue Article" || (!!t.sourceIssueRowId && t.typeOfRelease !== "Online Article" && !/\(Online Pubmat\)$/i.test(t.title))

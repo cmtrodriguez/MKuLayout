@@ -378,7 +378,14 @@ export default function AssignmentsList({
 
   const priorityWeights = { Urgent: 4, High: 3, Medium: 2, Low: 1 };
 
+  const isDoneTask = (t: Task) =>
+    t.progress === "Completed" || t.progress === "Approved" || t.progress === "Archived";
+
   const sortedTasks = [...filteredTasks].sort((a, b) => {
+    // Assigned/pending tasks stay on top; completed ones sink to the bottom
+    // (still listed, but greyed out in the card markup).
+    const doneDelta = Number(isDoneTask(a)) - Number(isDoneTask(b));
+    if (doneDelta !== 0) return doneDelta;
     if (sortBy === "priority") {
       return (priorityWeights[b.priority] || 0) - (priorityWeights[a.priority] || 0);
     } else {
@@ -390,7 +397,30 @@ export default function AssignmentsList({
   const isAdmin = currentUserRole === "Layout Editor" || currentUserRole === "Layout Deputy" || currentUserRole === "Online Layout Head";
 
   // Filter available layout and illustration staff for selection
-  const staffMembers = members.filter(m => m.statusSem1 === "Active" || m.statusSem2 === "Active");
+  const activeStaff = members.filter(m => m.statusSem1 === "Active" || m.statusSem2 === "Active");
+
+  // Always include the Layout Editor and Layout Deputy so either lead can assign
+  // a task to themselves, even if the members roster hasn't loaded them yet.
+  const leadMembers: TeamMember[] = Object.values(OFFICIAL_MEMBERS_MAP)
+    .filter(info => info.role === "Layout Editor" || info.role === "Layout Deputy")
+    .filter(info => !activeStaff.some(m => (m.email || "").toLowerCase() === info.email.toLowerCase()))
+    .map(info => ({
+      id: info.email,
+      name: info.officialName,
+      displayName: info.displayName,
+      role: info.role,
+      college: info.college,
+      email: info.email,
+      contact: info.contact,
+      statusSem1: "Active",
+      statusSem2: "Active",
+      type: info.role === "Layout Editor" ? "editor" : "layout",
+      xp: 0,
+      level: 1,
+      completedTasks: 0
+    }));
+
+  const staffMembers = [...activeStaff, ...leadMembers];
 
   return (
     <div className="space-y-3 sm:space-y-6">
@@ -948,12 +978,15 @@ export default function AssignmentsList({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
           {sortedTasks.map(task => {
-          const isOverdue = task.progress !== "Completed" && task.priority === "Urgent";
+          const isDone = isDoneTask(task);
+          const isOverdue = !isDone && task.progress !== "Completed" && task.priority === "Urgent";
           return (
             <div 
               key={task.id} 
               className={`glass-card hover:shadow-md rounded-xl sm:rounded-2xl p-3.5 sm:p-5 border transition-all flex flex-col justify-between space-y-2.5 sm:space-y-4 text-left ${
-                isOverdue 
+                isDone
+                  ? "opacity-55 border-gray-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/50 hover:opacity-90"
+                  : isOverdue 
                   ? "border-red-200 dark:border-red-800 bg-red-50/10 dark:bg-red-950/20" 
                   : "border-gray-100 dark:border-neutral-800 bg-white dark:bg-neutral-900"
               }`}

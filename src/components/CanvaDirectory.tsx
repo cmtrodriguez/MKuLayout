@@ -1,8 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { 
   Link as LinkIcon, ExternalLink, Edit2, Save, Copy, Check, 
-  Search, RotateCcw, LayoutGrid, ChevronDown, ChevronUp, Sparkles, Plus, Trash2, X
+  Search, LayoutGrid, ChevronDown, ChevronUp, Sparkles, Plus, Trash2, X
 } from "lucide-react";
+import {
+  fetchCanvaState,
+  saveCanvaState,
+  subscribeToCanvaState,
+  CanvaDirectoryState
+} from "../lib/supabase";
 
 interface CanvaTemplate {
   id: string;
@@ -47,6 +53,7 @@ export function CanvaDirectory({ currentUserRole }: CanvaDirectoryProps = {}) {
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [links, setLinks] = useState<Record<string, string>>({});
   const [customTemplates, setCustomTemplates] = useState<CanvaTemplate[]>([]);
+  const [removedIds, setRemovedIds] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -57,51 +64,76 @@ export function CanvaDirectory({ currentUserRole }: CanvaDirectoryProps = {}) {
   const [newCategory, setNewCategory] = useState<"Branding & Gen" | "Editorial" | "Visuals & Layouts">("Editorial");
   const [newLink, setNewLink] = useState("");
 
-  useEffect(() => {
-    // Load links from localStorage or fall back to defaults
-    const storedLinks = localStorage.getItem("mku_canva_template_links_v2");
-    const storedCustom = localStorage.getItem("mku_custom_canva_templates");
-
-    let initialCustom: CanvaTemplate[] = [];
-    if (storedCustom) {
-      try {
-        initialCustom = JSON.parse(storedCustom);
-        setCustomTemplates(initialCustom);
-      } catch (e) {
-        setCustomTemplates([]);
-      }
-    }
-
-    if (storedLinks) {
-      try {
-        setLinks(JSON.parse(storedLinks));
-      } catch (e) {
-        const initialLinks: Record<string, string> = {};
-        DEFAULT_TEMPLATES.forEach(t => {
-          initialLinks[t.id] = t.defaultLink;
-        });
-        setLinks(initialLinks);
-      }
-    } else {
-      const initialLinks: Record<string, string> = {};
-      DEFAULT_TEMPLATES.forEach(t => {
-        initialLinks[t.id] = t.defaultLink;
-      });
-      initialCustom.forEach(t => {
-        initialLinks[t.id] = t.defaultLink;
-      });
-      setLinks(initialLinks);
-    }
-  }, []);
-
-  const saveLinks = (updated: Record<string, string>) => {
-    setLinks(updated);
-    localStorage.setItem("mku_canva_template_links_v2", JSON.stringify(updated));
+  const defaultLinks = (): Record<string, string> => {
+    const initial: Record<string, string> = {};
+    DEFAULT_TEMPLATES.forEach(t => { initial[t.id] = t.defaultLink; });
+    return initial;
   };
 
-  const saveCustomTemplates = (updatedCustom: CanvaTemplate[]) => {
-    setCustomTemplates(updatedCustom);
-    localStorage.setItem("mku_custom_canva_templates", JSON.stringify(updatedCustom));
+  useEffect(() => {
+    let cancelled = false;
+
+    // Seed from the local cache first so the panel isn't empty on first paint,
+    // then reconcile with the shared Supabase copy (authoritative for the team).
+    const applyState = (next: CanvaDirectoryState) => {
+      if (cancelled) return;
+      setLinks({ ...defaultLinks(), ...next.links });
+      setCustomTemplates(next.custom as CanvaTemplate[]);
+      setRemovedIds(next.removed);
+    };
+
+    try {
+      const cachedLinks = localStorage.getItem("mku_canva_template_links_v2");
+      const cachedCustom = localStorage.getItem("mku_custom_canva_templates");
+      const cachedRemoved = localStorage.getItem("mku_removed_canva_templates");
+      applyState({
+        links: cachedLinks ? JSON.parse(cachedLinks) : {},
+        custom: cachedCustom ? JSON.parse(cachedCustom) : [],
+        removed: cachedRemoved ? JSON.parse(cachedRemoved) : []
+      });
+    } catch {
+      setLinks(defaultLinks());
+    }
+
+    (async () => {
+      const shared = await fetchCanvaState();
+      if (shared) applyState(shared);
+    })();
+
+    // Live-sync additions/removals/edits made by any other layout member.
+    const unsubscribe = subscribeToCanvaState((shared) => {
+      applyState(shared);
+      try {
+        localStorage.setItem("mku_canva_template_links_v2", JSON.stringify(shared.links));
+        localStorage.setItem("mku_custom_canva_templates", JSON.stringify(shared.custom));
+        localStorage.setItem("mku_removed_canva_templates", JSON.stringify(shared.removed));
+      } catch {}
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
+
+  // Persist the full directory state locally (cache) and to Supabase (shared
+  // with every layout member in realtime).
+  const persist = (next: { links?: Record<string, string>; custom?: CanvaTemplate[]; removed?: string[] }) => {
+    const nextLinks = next.links ?? links;
+    const nextCustom = next.custom ?? customTemplates;
+    const nextRemoved = next.removed ?? removedIds;
+
+    setLinks(nextLinks);
+    setCustomTemplates(nextCustom);
+    setRemovedIds(nextRemoved);
+
+    try {
+      localStorage.setItem("mku_canva_template_links_v2", JSON.stringify(nextLinks));
+      localStorage.setItem("mku_custom_canva_templates", JSON.stringify(nextCustom));
+      localStorage.setItem("mku_removed_canva_templates", JSON.stringify(nextRemoved));
+    } catch {}
+
+    saveCanvaState({ links: nextLinks, custom: nextCustom, removed: nextRemoved });
   };
 
   const handleEditStart = (id: string, currentVal: string) => {
@@ -110,22 +142,8 @@ export function CanvaDirectory({ currentUserRole }: CanvaDirectoryProps = {}) {
   };
 
   const handleEditSave = (id: string) => {
-    const updated = { ...links, [id]: editValue };
-    saveLinks(updated);
+    persist({ links: { ...links, [id]: editValue } });
     setEditingId(null);
-  };
-
-  const handleResetDefaults = () => {
-    if (window.confirm("Are you sure you want to reset template links back to default values?")) {
-      const initialLinks: Record<string, string> = {};
-      DEFAULT_TEMPLATES.forEach(t => {
-        initialLinks[t.id] = t.defaultLink;
-      });
-      customTemplates.forEach(t => {
-        initialLinks[t.id] = t.defaultLink;
-      });
-      saveLinks(initialLinks);
-    }
   };
 
   const handleCopyLink = (id: string, url: string) => {
@@ -147,28 +165,32 @@ export function CanvaDirectory({ currentUserRole }: CanvaDirectoryProps = {}) {
       isCustom: true,
     };
 
-    const nextCustom = [...customTemplates, newT];
-    saveCustomTemplates(nextCustom);
-
-    const nextLinks = { ...links, [id]: newLink.trim() };
-    saveLinks(nextLinks);
+    persist({
+      custom: [...customTemplates, newT],
+      links: { ...links, [id]: newLink.trim() },
+      removed: removedIds.filter(r => r !== id)
+    });
 
     setNewName("");
     setNewLink("");
     setShowAddForm(false);
   };
 
-  const handleDeleteCustomTemplate = (id: string) => {
-    if (window.confirm("Delete this custom Canva asset template?")) {
-      const nextCustom = customTemplates.filter(t => t.id !== id);
-      saveCustomTemplates(nextCustom);
-      const nextLinks = { ...links };
-      delete nextLinks[id];
-      saveLinks(nextLinks);
-    }
+  const handleRemoveTemplate = (id: string) => {
+    if (!window.confirm("Remove this Canva template for everyone?")) return;
+    const nextCustom = customTemplates.filter(t => t.id !== id);
+    const nextLinks = { ...links };
+    delete nextLinks[id];
+    const nextRemoved = nextCustom.length < customTemplates.length
+      ? removedIds // a custom template was deleted outright
+      : Array.from(new Set([...removedIds, id])); // a default template was hidden
+    persist({ custom: nextCustom, links: nextLinks, removed: nextRemoved });
   };
 
-  const allTemplates = [...DEFAULT_TEMPLATES, ...customTemplates];
+  const allTemplates = [
+    ...DEFAULT_TEMPLATES.filter(t => !removedIds.includes(t.id)),
+    ...customTemplates
+  ];
 
   const filteredTemplates = allTemplates.filter(t => {
     return t.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -228,14 +250,6 @@ export function CanvaDirectory({ currentUserRole }: CanvaDirectoryProps = {}) {
                   >
                     <Plus className="w-3 h-3" />
                     <span>Add Template</span>
-                  </button>
-
-                  <button
-                    onClick={handleResetDefaults}
-                    className="p-1.5 text-stone-400 hover:text-stone-700 hover:bg-stone-50 rounded-lg transition-all cursor-pointer"
-                    title="Reset all to defaults"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
                   </button>
                 </>
               )}
@@ -336,11 +350,11 @@ export function CanvaDirectory({ currentUserRole }: CanvaDirectoryProps = {}) {
                     <span className="text-[9px] font-mono font-bold bg-brand-maroon/5 text-brand-maroon px-2 py-0.5 rounded">
                       {t.category}
                     </span>
-                    {t.isCustom && (
+                    {!isLayoutStaff && (
                       <button
-                        onClick={() => handleDeleteCustomTemplate(t.id)}
+                        onClick={() => handleRemoveTemplate(t.id)}
                         className="text-stone-400 hover:text-red-600 transition-all cursor-pointer"
-                        title="Delete custom template"
+                        title="Remove template for everyone"
                       >
                         <Trash2 className="w-3 h-3" />
                       </button>
