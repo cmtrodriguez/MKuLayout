@@ -389,13 +389,19 @@ export default function SheetsSync({
           currentGrid = padded;
           localStorage.setItem(`cache_vals_${spreadsheetId}_${sheetTitle}`, JSON.stringify(padded));
 
-          // Ingest pre-existing rows on first connect, and pick up rows added or
-          // edited directly in the live Sheet, so they surface as tasks. Row
-          // signatures are persisted so a reload only dispatches real deltas.
+          // Pick up rows added or edited directly in the live Sheet so they surface
+          // as tasks. Row signatures are persisted so a reload only dispatches real
+          // deltas. On the very first connect there is no baseline yet, so we only
+          // record signatures here and DO NOT dispatch — merely loading the embedded
+          // sheet ("website") into the Issue Pages / Online Pubmat sections must not
+          // spawn request confirmations. Confirmations begin only once a row is
+          // actually edited (in-app edits dispatch directly; remote edits are caught
+          // by the signature diff on subsequent polls).
           try {
             const sigKey = `row_sigs_${spreadsheetId}_${sheetTitle}`;
             let prevSigs: Record<string, string> = {};
             try { prevSigs = JSON.parse(localStorage.getItem(sigKey) || "{}"); } catch { prevSigs = {}; }
+            const hadBaseline = Object.keys(prevSigs).length > 0;
             const headers = padded[0] || [];
             const tIdx = headers.findIndex(h => {
               const s = (h || "").toLowerCase();
@@ -413,7 +419,7 @@ export default function SheetsSync({
                 if (prevSigs[rowTitle] !== sig) changedRows.push(row);
               }
               localStorage.setItem(sigKey, JSON.stringify(nextSigs));
-              if (changedRows.length > 0) dispatchRowsToOnlinePubmat(changedRows, headers);
+              if (hadBaseline && changedRows.length > 0) dispatchRowsToOnlinePubmat(changedRows, headers);
             }
           } catch (ingestErr) {
             console.warn("Row ingest skipped:", ingestErr);

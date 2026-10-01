@@ -184,8 +184,12 @@ export default function DashboardOverview({
     const mNameLower = m.name.toLowerCase();
     const shortLower = shortName.toLowerCase();
 
-    // Filter tasks for this staffer
+    // Filter tasks for this staffer. The workload tracker must only reflect work that
+    // a layout editor/deputy has APPROVED (progress Completed/Approved) — never tasks
+    // that are merely assigned or still in progress.
     const memberTasks = tasks.filter((t) => {
+      const approved = t.progress === "Completed" || t.progress === "Approved";
+      if (!approved) return false;
       const artist = (t.illusLayout || "").toLowerCase();
       return (
         artist.includes(shortLower) ||

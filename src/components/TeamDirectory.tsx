@@ -90,7 +90,11 @@ export default function TeamDirectory({
       );
     });
 
-    const calculatedSemPubs = staffTasks.length + (existing?.currentSemPubs || 0);
+    // Derive semester pubs purely from the member's completed tasks. Do NOT add the
+    // previously stored currentSemPubs — that double-counts and caused the count to
+    // inflate by the number of completed tasks every time the schedule/availability
+    // was saved (saving re-persists effectiveMembers).
+    const calculatedSemPubs = staffTasks.length;
 
     return {
       id: existing ? existing.id : String(idx + 1),

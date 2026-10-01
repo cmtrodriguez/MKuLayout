@@ -111,8 +111,6 @@ export default function ProfileSettings({
     return { month, count };
   });
 
-  const peakMonth = monthCounts.reduce((top, current) => current.count > top.count ? current : top, monthCounts[0] || { month: "N/A", count: 0 });
-
   const handleCopy = (text: string, key: string, label: string) => {
     navigator.clipboard.writeText(text);
     setCopiedField(key);
@@ -447,11 +445,6 @@ export default function ProfileSettings({
                   </div>
                 </div>
               )}
-
-              <div className="flex items-center justify-between border-t border-gray-200 dark:border-neutral-700 pt-2 text-[10px] text-gray-500 dark:text-neutral-400">
-                <span>Peak month</span>
-                <span className="font-bold text-gray-800 dark:text-neutral-200">{peakMonth.month} • {peakMonth.count}</span>
-              </div>
             </div>
             
             {/* Dark / Light Mode Selector */}

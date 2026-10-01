@@ -425,6 +425,7 @@ export function EicDashboard({
 }: EicDashboardProps) {
   const [selectedReviewTaskId, setSelectedReviewTaskId] = useState<string | null>(null);
   const [revisionFeedback, setRevisionFeedback] = useState("");
+  const [approvalFeedback, setApprovalFeedback] = useState("");
   const [activeSubTab, setActiveSubTab] = useState<"review" | "pipeline">("review");
   const [pipelineSearch, setPipelineSearch] = useState("");
 
@@ -463,27 +464,30 @@ export function EicDashboard({
   const reviewTasks = tasks.filter(t => t.progress === "For Review");
 
   const handleApprove = (task: Task) => {
-    const isLayoutEditor = currentUserRole === "Layout Editor";
-    const nextProgress = isLayoutEditor ? "Completed" : "Completed"; // Both approve the layout to completion
     const updated: Task = {
       ...task,
-      progress: nextProgress,
+      progress: "Completed",
       lastUpdated: new Date().toISOString()
     };
     onUpdateTask(updated);
-    
-    const approvalComment = "Approved layout design. Excellent proportions, colors, and font tracking. Locked for publication release.";
-    onAddComment(approvalComment, task.id);
-    
-    if (onAddNotification) {
+
+    // No auto-generated praise/comment on approval — the status change itself is the
+    // indication that the task was approved. The editor/deputy may optionally attach
+    // their own message alongside the approval.
+    const customMessage = approvalFeedback.trim();
+    if (customMessage) {
+      onAddComment(customMessage, task.id);
+    } else if (onAddNotification) {
       const assigneeEmail = task.assigneeEmail || resolveMemberEmail(task.illusLayout);
       onAddNotification(
-        isLayoutEditor ? "Layout Approved" : "Layout Approved",
-        `Your layout '${task.title}' was approved and locked for publication.`,
+        "Layout Approved",
+        `Your layout '${task.title}' was approved.`,
         "assignment",
         assigneeEmail ? [assigneeEmail] : undefined
       );
     }
+
+    setApprovalFeedback("");
     setSelectedReviewTaskId(null);
     speakText(`Layout ${task.title} approved for publication release!`);
   };
@@ -682,6 +686,19 @@ export function EicDashboard({
                               onKeyDown={(e) => handleBulletKeyDown(e, revisionFeedback, setRevisionFeedback)}
                               rows={2}
                               className="w-full px-2.5 py-1.5 sm:px-3 sm:py-2 border border-gray-200 rounded-lg text-xs outline-none focus:ring-2 focus:ring-brand-maroon bg-white resize-none"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] sm:text-xs font-semibold text-gray-600 mb-1">
+                              Approval Message (optional)
+                            </label>
+                            <textarea
+                              placeholder="Optionally add a note to the assignee alongside the approval..."
+                              value={approvalFeedback}
+                              onChange={(e) => setApprovalFeedback(e.target.value)}
+                              rows={2}
+                              className="w-full px-2.5 py-1.5 sm:px-3 sm:py-2 border border-gray-200 rounded-lg text-xs outline-none focus:ring-2 focus:ring-emerald-600 bg-white resize-none"
                             />
                           </div>
 
