@@ -326,16 +326,16 @@ export default function TeamDirectory({
                   )}
 
                   {/* Schedule Display */}
-                  <div className="space-y-1.5 bg-neutral-50/70 p-2.5 rounded-xl border border-neutral-150">
+                  <div className="space-y-1.5 bg-neutral-50/70 dark:bg-neutral-800/70 p-2.5 rounded-xl border border-neutral-150 dark:border-neutral-700">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-bold text-neutral-700 flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-brand-maroon" /> Weekly Availability
+                        <Clock className="w-3 h-3 text-brand-maroon dark:text-brand-maroon-light" /> Weekly Availability
                       </span>
                       {(isLayoutEditor || isSelf) && (
                         <button
                           type="button"
                           onClick={() => handleOpenScheduleModal(m)}
-                          className="text-[10px] font-bold text-brand-maroon hover:underline cursor-pointer"
+                          className="text-[10px] font-bold text-brand-maroon dark:text-brand-maroon-light hover:underline cursor-pointer"
                         >
                           Update
                         </button>
