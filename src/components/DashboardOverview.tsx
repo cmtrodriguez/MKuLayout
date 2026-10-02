@@ -188,8 +188,9 @@ export default function DashboardOverview({
     const mNameLower = m.name.toLowerCase();
     const shortLower = shortName.toLowerCase();
 
-    // Filter tasks for this staffer
+    // Workload reflects approved work only, not assignments still in progress.
     const memberTasks = tasks.filter((t) => {
+      if (t.progress !== "Approved") return false;
       const artist = (t.illusLayout || "").toLowerCase();
       return (
         artist.includes(shortLower) ||
@@ -728,7 +729,7 @@ export default function DashboardOverview({
                       Workload Tracker (Online Pubs vs Issues)
                     </h3>
                     <p className="text-[9px] sm:text-[10px] text-neutral-400 dark:text-neutral-500">
-                      Total online pubs and newspaper issues per staffer in vertical bar graph form
+                      Approved online pubs and newspaper issues per staffer
                     </p>
                   </div>
 

@@ -468,10 +468,9 @@ export function EicDashboard({
 
   const handleApprove = (task: Task) => {
     const isLayoutEditor = currentUserRole === "Layout Editor";
-    const nextProgress = isLayoutEditor ? "Completed" : "Completed"; // Both approve the layout to completion
     const updated: Task = {
       ...task,
-      progress: nextProgress,
+      progress: "Approved",
       lastUpdated: new Date().toISOString()
     };
     onUpdateTask(updated);
