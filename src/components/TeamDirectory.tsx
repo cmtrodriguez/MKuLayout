@@ -7,6 +7,7 @@ import {
 import { TeamMember, MemberSchedule, Task, normalizeEmail } from "../types";
 import { OFFICIAL_ACCOUNTS } from "./LoginPage";
 import { getOfficialFullName } from "../lib/memberUtils";
+import AvailableTodayCard from "./AvailableTodayCard";
 
 const WEEK_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -171,7 +172,12 @@ export default function TeamDirectory({
 
   return (
     <div className="space-y-4 sm:space-y-6 text-left">
-      
+
+      {/* Available Today board — Editor / Deputy only */}
+      {canViewWorkload && (
+        <AvailableTodayCard members={members} />
+      )}
+
       {/* Search, Filters, and View Switcher */}
       <div className="bg-white p-3 sm:p-4 rounded-xl border border-gray-100 shadow-xs space-y-3">
         <div className="flex flex-col md:flex-row gap-3 items-center justify-between">

@@ -11,6 +11,7 @@ import { getPreferredFirstName, isUserAssignedToTask } from "../lib/memberUtils"
 import { createPoll, updatePollOptionVotes, deletePoll, createAnnouncement, deleteAnnouncement } from "../lib/supabase";
 import CalendarView from "./CalendarView";
 import MeetingPolls from "./MeetingPolls";
+import AvailableTodayCard from "./AvailableTodayCard";
 
 interface DashboardOverviewProps {
   tasks: Task[];
@@ -363,6 +364,11 @@ export default function DashboardOverview({
           </div>
         </div>
       </div>
+
+      {/* Available-today roster — Layout Editor & Layout Deputy home workspace */}
+      {(currentUserRole === "Layout Editor" || currentUserRole === "Layout Deputy") && (
+        <AvailableTodayCard members={members} />
+      )}
 
       {/* --- CONTENT AREA: RENDERS CONDITIONALLY BASED ON SELECT SUB-TAB --- */}
 
