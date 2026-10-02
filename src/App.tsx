@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { 
   LayoutGrid, FileSpreadsheet, Kanban, GraduationCap, Calendar, 
-  HelpCircle, Bot, Users, Bell, AlertOctagon, Plus, X, Shield, 
+  HelpCircle, Bot, Users, Bell, AlertOctagon, Plus, X, Shield, Ban, Trash2,
   Sparkles, ShieldCheck, HeartPulse, CheckSquare, RefreshCw, BookOpen,
   Menu, LogOut, Link2, Sun, Moon, FileText, CheckCircle2, ExternalLink, Loader2, User, ArrowRight
 } from "lucide-react";
@@ -122,7 +122,7 @@ export default function App() {
   // added sheet has no rows yet, so its Issue Tasks section starts blank.
   const currentSheetRowIds = new Set(issueRows.map((row) => row.id));
   const isCompletedTask = (task: Task) =>
-    task.progress === "Completed" || task.progress === "Approved" || task.progress === "Archived";
+    task.progress === "Completed" || task.progress === "Approved" || task.progress === "Archived" || task.progress === "Shelved";
   const issueTaskCards = tasks
     .filter((task) => {
       const isOnlineOnlyCompanion = task.title.includes("(Online Pubmat)") || task.typeOfRelease === "Online Article";
@@ -919,6 +919,32 @@ export default function App() {
     setIssueRowDraft(null);
   };
 
+  const cancelIssueTask = (task: Task) => {
+    commitTasks((prev) => prev.map((item) => item.id === task.id
+      ? { ...item, progress: "Shelved", lastUpdated: new Date().toISOString() }
+      : item
+    ));
+    if (task.sourceIssueRowId) {
+      updateIssueSheets((prev) => prev.map((sheet) => ({
+        ...sheet,
+        rows: sheet.rows.map((row) => row.id === task.sourceIssueRowId ? { ...row, progress: "Shelved" } : row)
+      })));
+    }
+  };
+
+  const removeIssueTask = (task: Task) => {
+    const sourceRowId = task.sourceIssueRowId;
+    if (sourceRowId) {
+      updateIssueSheets((prev) => prev.map((sheet) => ({
+        ...sheet,
+        rows: sheet.rows.map((row) => row.id === sourceRowId ? { ...row, layout: "" } : row)
+      })));
+    }
+    commitTasks((prev) => prev.filter((item) =>
+      item.id !== task.id && !(sourceRowId && item.sourceIssueRowId === sourceRowId && item.typeOfRelease === "Issue Article")
+    ));
+  };
+
   const deleteIssueRow = (rowId: string) => {
     updateIssueSheets((prev) => prev.map((sheet) => {
       if (sheet.id !== currentIssueSheetId) return sheet;
@@ -952,13 +978,6 @@ export default function App() {
       }
       return remaining;
     });
-  };
-
-  const removeIssueRow = (id: string) => {
-    updateIssueSheets((prev) => prev.map((sheet) => {
-      if (sheet.id !== currentIssueSheetId) return sheet;
-      return { ...sheet, rows: sheet.rows.filter((row) => row.id !== id) };
-    }));
   };
 
   useEffect(() => {
@@ -1812,6 +1831,32 @@ export default function App() {
                             >
                               Workspace <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                             </button>
+                            {userRole === "Layout Editor" && (
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (window.confirm(`Cancel issue task '${task.title}'?`)) cancelIssueTask(task);
+                                  }}
+                                  className="p-1.5 text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/40 rounded-lg cursor-pointer"
+                                  aria-label={`Cancel issue task ${task.title}`}
+                                  title="Cancel task"
+                                >
+                                  <Ban className="w-4 h-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (window.confirm(`Remove issue task '${task.title}'? Its layout assignment will be cleared.`)) removeIssueTask(task);
+                                  }}
+                                  className="p-1.5 text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40 rounded-lg cursor-pointer"
+                                  aria-label={`Remove issue task ${task.title}`}
+                                  title="Remove task"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
                         );
@@ -2210,7 +2255,11 @@ export default function App() {
         currentUserRole={userRole}
         onClose={() => setSelectedTask(null)}
         onDeleteTask={(taskToDelete) => {
-          commitTasks((prev) => prev.filter((t) => t.id !== taskToDelete.id));
+          if (taskToDelete.typeOfRelease === "Issue Article") {
+            removeIssueTask(taskToDelete);
+          } else {
+            commitTasks((prev) => prev.filter((t) => t.id !== taskToDelete.id));
+          }
           setSelectedTask(null);
         }}
         onUpdateTask={(updatedTask) => {

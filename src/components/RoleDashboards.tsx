@@ -52,10 +52,9 @@ export function LayoutStaffDashboard({
     speakText("Comment sent to editor.");
   };
 
-  // Fully completed/approved assignments are hidden from "My Assignments"; they
-  // live only in the member's Task Archive (Profile & Settings).
+  // Completed and shelved assignments are hidden from the active "My Assignments" list.
   const isDoneTask = (t: Task) =>
-    t.progress === "Completed" || t.progress === "Approved" || t.progress === "Archived";
+    t.progress === "Completed" || t.progress === "Approved" || t.progress === "Archived" || t.progress === "Shelved";
 
   const myTasks = tasks.filter(t =>
     !t.isPendingConfirmation && !isDoneTask(t) && isUserAssignedToTask(t, currentUserName, currentUserEmail)
