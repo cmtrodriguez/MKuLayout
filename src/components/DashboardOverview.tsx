@@ -190,7 +190,7 @@ export default function DashboardOverview({
 
     // Workload reflects approved work only, not assignments still in progress.
     const memberTasks = tasks.filter((t) => {
-      if (t.progress !== "Approved") return false;
+      if (t.progress !== "Approved" && t.progress !== "Completed") return false;
       const artist = (t.illusLayout || "").toLowerCase();
       return (
         artist.includes(shortLower) ||
