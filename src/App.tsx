@@ -900,7 +900,7 @@ export default function App() {
       pubmatLink: "",
       draftLink: "",
       addedToLayout: "",
-      onlineHandler: issueRowDraft.online || resolved.name,
+      onlineHandler: issueRowDraft.online || "",
       isPendingConfirmation: true,
       sourceIssueRowId: issueRowDraft.id,
     };

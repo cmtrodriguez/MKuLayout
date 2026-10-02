@@ -139,8 +139,9 @@ export default function AssignmentsList({
     let updated = tasks.map(t => t.id === task.id ? finalData : t);
 
     const sourceRowId = (activeForm as any).sourceIssueRowId || (task as any).sourceIssueRowId;
-    const dispatchProgress = (finalData.illusLayout && finalData.illusLayout !== "Unassigned") ? "Assigned" : "Not Started";
-    const resolvedAssignee = resolveLayoutAssignee(finalData.illusLayout || "", members);
+    const issueAssignee = resolveLayoutAssignee(finalData.illusLayout || "", members);
+    const onlineAssignee = resolveLayoutAssignee(finalData.onlineHandler || "", members);
+    const dispatchProgress = issueAssignee.name !== "Unassigned" || onlineAssignee.name !== "Unassigned" ? "Assigned" : "Not Started";
     const fromIssueSheet = !!sourceRowId || finalData.typeOfRelease === "Issue Article" || task.typeOfRelease === "Issue Article";
 
     if (fromIssueSheet) {
@@ -157,30 +158,37 @@ export default function AssignmentsList({
       const sharedFields: Partial<Task> = {
         ...finalData,
         title: baseTitle,
-        illusLayout: resolvedAssignee.name || finalData.illusLayout,
-        assigneeEmail: resolvedAssignee.email || finalData.assigneeEmail || "",
-        assigneeName: resolvedAssignee.name || finalData.assigneeName || finalData.illusLayout,
         isPendingConfirmation: false,
         progress: dispatchProgress,
         lastUpdated: new Date().toISOString(),
         sourceIssueRowId: sourceRowId || finalData.sourceIssueRowId,
       };
 
-      const onlineTask: Task = {
-        ...finalData,
-        ...sharedFields,
-        id: onlineTaskId,
-        title: `${baseTitle} (Online Pubmat)`,
-        typeOfRelease: "Online Article",
-      };
-
-      const issueTask: Task = {
-        ...finalData,
-        ...sharedFields,
-        id: issueTaskId,
-        title: baseTitle,
-        typeOfRelease: "Issue Article",
-      };
+      const dispatchedTasks: Task[] = [];
+      if (issueAssignee.name !== "Unassigned") {
+        dispatchedTasks.push({
+          ...sharedFields,
+          id: issueTaskId,
+          title: baseTitle,
+          typeOfRelease: "Issue Article",
+          illusLayout: issueAssignee.name,
+          assigneeEmail: issueAssignee.email,
+          assigneeName: issueAssignee.name,
+          onlineHandler: "",
+        } as Task);
+      }
+      if (onlineAssignee.name !== "Unassigned") {
+        dispatchedTasks.push({
+          ...sharedFields,
+          id: onlineTaskId,
+          title: `${baseTitle} (Online Pubmat)`,
+          typeOfRelease: "Online Article",
+          illusLayout: onlineAssignee.name,
+          assigneeEmail: onlineAssignee.email,
+          assigneeName: onlineAssignee.name,
+          onlineHandler: onlineAssignee.name,
+        } as Task);
+      }
 
       updated = updated.filter(t =>
         t.id !== task.id &&
@@ -189,7 +197,7 @@ export default function AssignmentsList({
         (sourceRowId ? t.id !== seededUuid(`issue-pending-${sourceRowId}`) : true) &&
         !(sourceRowId && t.sourceIssueRowId === sourceRowId)
       );
-      updated = [issueTask, onlineTask, ...updated];
+      updated = [...dispatchedTasks, ...updated];
     }
 
     onUpdateTasks(updated);
@@ -199,7 +207,7 @@ export default function AssignmentsList({
       setEditForm(null);
     }
     
-    speakText(`Confirmed and dispatched dual assignments (Issue Layout & Online Pubmat) for "${finalData.title}" to ${finalData.illusLayout}.`);
+    speakText(`Confirmed and dispatched assignments for "${finalData.title}".`);
   };
 
   const handleConfirmAndDispatch = (task: Task) => {
