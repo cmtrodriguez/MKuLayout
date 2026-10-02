@@ -1,12 +1,12 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { 
   X, MessageSquare, Link, ExternalLink, Sparkles, Clock, AlertTriangle, 
-  Trash2, User, FileText, Send, Calendar, RefreshCw, Lock 
+  Trash2, User, FileText, Send, Calendar, RefreshCw, Lock, ImagePlus
 } from "lucide-react";
 import { Task, TeamMember, TaskComment, TaskStatus, TaskPriority } from "../types";
 import { extractHyperlinkDetails } from "../lib/canvaTemplates";
 import { isUserAssignedToTask } from "../lib/memberUtils";
-import { formatCommentDetails, handleBulletKeyDown, RenderFormattedComment } from "../lib/commentUtils";
+import { compressCommentImage, formatCommentDetails, handleBulletKeyDown, MAX_COMMENT_IMAGES, RenderFormattedComment } from "../lib/commentUtils";
 import { getPreferredFirstName } from "../lib/memberUtils";
 import { toISOFormatDate, formatISOToDisplayDate } from "./AssignmentsList";
 import GoogleDocShareWidget from "./GoogleDocShareWidget";
@@ -42,6 +42,10 @@ export default function TaskDetailsModal({
   onTriggerCritiqueTab,
 }: TaskDetailsModalProps) {
   const [commentText, setCommentText] = useState("");
+  const [commentImages, setCommentImages] = useState<string[]>([]);
+  const [isPreparingImages, setIsPreparingImages] = useState(false);
+  const [imageError, setImageError] = useState("");
+  const imageInput = useRef<HTMLInputElement>(null);
   const isEditorOrDeputy = currentUserRole === "Layout Editor" || currentUserRole === "Layout Deputy" || currentUserRole === "Online Layout Head";
 
   const isAssignedStaffer = (task.illusLayout || "").toLowerCase().includes((currentUserName || "").toLowerCase()) || 
@@ -70,6 +74,30 @@ export default function TaskDetailsModal({
 
   const taskComments = comments.filter((c) => c.taskId === task.id);
 
+  const handleSelectCommentImages = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.currentTarget.files || []);
+    event.currentTarget.value = "";
+    const availableSlots = MAX_COMMENT_IMAGES - commentImages.length;
+    if (files.length === 0) return;
+    if (availableSlots <= 0) {
+      setImageError("A message can include up to 5 pictures.");
+      return;
+    }
+
+    setIsPreparingImages(true);
+    setImageError(files.length > availableSlots ? "Only 5 pictures can be attached to one message." : "");
+    const preparedImages: string[] = [];
+    for (const file of files.slice(0, availableSlots)) {
+      try {
+        preparedImages.push(await compressCommentImage(file));
+      } catch (error) {
+        setImageError(error instanceof Error ? error.message : "Could not add this image.");
+      }
+    }
+    setCommentImages((current) => [...current, ...preparedImages].slice(0, MAX_COMMENT_IMAGES));
+    setIsPreparingImages(false);
+  };
+
   // Status handle
   const handleStatusChange = (newStatus: TaskStatus) => {
     const updated = { 
@@ -95,7 +123,7 @@ export default function TaskDetailsModal({
 
   // Add Comment
   const handlePostComment = () => {
-    if (!commentText.trim()) return;
+    if ((!commentText.trim() && commentImages.length === 0) || isPreparingImages) return;
     
     const newComment: TaskComment = {
       id: `comment-${Date.now()}`,
@@ -103,7 +131,8 @@ export default function TaskDetailsModal({
       authorName: currentUserName,
       authorEmail: currentUserEmail,
       text: commentText,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      ...(commentImages.length ? { images: commentImages } : {})
     };
 
     onAddComment(newComment);
@@ -115,6 +144,8 @@ export default function TaskDetailsModal({
     });
 
     setCommentText("");
+    setCommentImages([]);
+    setImageError("");
     speakText("Comment added.");
   };
 
@@ -439,6 +470,15 @@ export default function TaskDetailsModal({
                         <div className="pl-6 pt-1 text-gray-800 dark:text-neutral-200">
                           <RenderFormattedComment text={cleanedText} isEditorRole={roleLabel.includes("Editor") || roleLabel.includes("EIC")} />
                         </div>
+                        {com.images && com.images.length > 0 && (
+                          <div className="pl-6 grid grid-cols-2 gap-2">
+                            {com.images.slice(0, MAX_COMMENT_IMAGES).map((image, index) => (
+                              <a key={`${com.id}-${index}`} href={image} target="_blank" rel="noreferrer" className="block aspect-square overflow-hidden rounded-lg border border-gray-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-900">
+                                <img src={image} alt={`Comment attachment ${index + 1}`} loading="lazy" className="w-full h-full object-cover" />
+                              </a>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     );
                   })
@@ -450,6 +490,38 @@ export default function TaskDetailsModal({
           {/* Post Comment Input */}
           {canViewThisTaskComments && (
             <div className="pt-3 border-t border-gray-100/80 dark:border-neutral-700 mt-auto space-y-1.5 text-left">
+              <input
+                ref={imageInput}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                onChange={handleSelectCommentImages}
+                className="hidden"
+                aria-label="Choose pictures to attach"
+              />
+              {commentImages.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {commentImages.map((image, index) => (
+                    <div key={image} className="relative w-14 h-14 rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
+                      <img src={image} alt={`Attachment preview ${index + 1}`} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setCommentImages((current) => current.filter((_, imageIndex) => imageIndex !== index))}
+                        className="absolute top-0.5 right-0.5 p-0.5 rounded-full bg-black/70 text-white cursor-pointer"
+                        aria-label={`Remove picture ${index + 1}`}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                  <span className="self-center text-[10px] text-gray-500">{commentImages.length}/{MAX_COMMENT_IMAGES}</span>
+                </div>
+              )}
+              {(imageError || isPreparingImages) && (
+                <p role={imageError ? "alert" : "status"} className="text-[10px] text-rose-600 dark:text-rose-400">
+                  {isPreparingImages ? "Preparing pictures…" : imageError}
+                </p>
+              )}
               <div className="flex items-start gap-2">
                 <textarea
                   placeholder="Post a layout suggestion... (type '- ' for bullet points, Enter for new line)"
@@ -460,8 +532,19 @@ export default function TaskDetailsModal({
                   className="flex-1 px-3 py-2 border border-gray-200 dark:border-neutral-700 rounded-xl text-xs focus:ring-2 focus:ring-brand-maroon bg-white dark:bg-neutral-800 text-gray-800 dark:text-neutral-100 outline-none resize-none"
                 />
                 <button
+                  type="button"
+                  onClick={() => imageInput.current?.click()}
+                  disabled={isPreparingImages || commentImages.length >= MAX_COMMENT_IMAGES}
+                  className="p-2.5 border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-600 dark:text-neutral-300 hover:text-brand-maroon rounded-xl disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer self-stretch"
+                  aria-label={`Attach pictures (${commentImages.length} of ${MAX_COMMENT_IMAGES})`}
+                  title={`Attach pictures (${commentImages.length}/${MAX_COMMENT_IMAGES})`}
+                >
+                  <ImagePlus className="w-4 h-4" />
+                </button>
+                <button
                   onClick={handlePostComment}
-                  className="p-2.5 bg-brand-maroon hover:bg-brand-maroon-dark text-white rounded-xl transition-all self-stretch flex items-center justify-center shrink-0 cursor-pointer shadow-2xs"
+                  disabled={isPreparingImages || (!commentText.trim() && commentImages.length === 0)}
+                  className="p-2.5 bg-brand-maroon hover:bg-brand-maroon-dark text-white rounded-xl transition-all self-stretch flex items-center justify-center shrink-0 cursor-pointer shadow-2xs disabled:opacity-40 disabled:cursor-not-allowed"
                   aria-label="Send comment"
                 >
                   <Send className="w-4 h-4" />

@@ -289,14 +289,31 @@ export async function deleteTask(taskId: string): Promise<boolean> {
 // TASK COMMENTS
 // ============================================================================
 
+const COMMENT_IMAGE_ENVELOPE = "__MKULE_COMMENT_V1__";
+const isCommentImageDataUrl = (value: unknown): value is string =>
+  typeof value === "string" && /^data:image\/(?:jpeg|png|webp);base64,/i.test(value);
+
 export function commentFromDb(row: any): TaskComment {
+  const storedText = row.text || "";
+  let text = storedText;
+  let images: string[] | undefined;
+  if (storedText.startsWith(COMMENT_IMAGE_ENVELOPE)) {
+    try {
+      const payload = JSON.parse(storedText.slice(COMMENT_IMAGE_ENVELOPE.length));
+      text = typeof payload.text === "string" ? payload.text : "";
+      images = Array.isArray(payload.images) ? payload.images.filter(isCommentImageDataUrl).slice(0, 5) : [];
+    } catch {
+      text = storedText;
+    }
+  }
   return {
     id: row.id,
     taskId: row.task_id,
     authorName: row.author_name || "Staff",
     authorEmail: row.author_email || "",
-    text: row.text || "",
-    timestamp: row.timestamp || row.created_at || new Date().toISOString()
+    text,
+    timestamp: row.timestamp || row.created_at || new Date().toISOString(),
+    ...(images?.length ? { images } : {})
   };
 }
 
@@ -313,14 +330,17 @@ export async function fetchComments(taskId?: string): Promise<TaskComment[]> {
 }
 
 export async function createComment(comment: Partial<TaskComment>): Promise<TaskComment | null> {
-  if (!supabase || !comment.taskId || !comment.text) return null;
+  if (!supabase || !comment.taskId) return null;
+  const images = Array.isArray(comment.images) ? comment.images.filter(isCommentImageDataUrl).slice(0, 5) : [];
+  const text = comment.text || "";
+  if (!text.trim() && images.length === 0) return null;
   const id = ensureUuid(comment.id);
   const row = {
     id,
     task_id: comment.taskId,
     author_name: comment.authorName || "Staff",
     author_email: comment.authorEmail || "",
-    text: comment.text,
+    text: images.length ? `${COMMENT_IMAGE_ENVELOPE}${JSON.stringify({ text, images })}` : text,
     timestamp: comment.timestamp ? new Date(comment.timestamp).toISOString() : new Date().toISOString()
   };
   const { data, error } = await supabase.from("task_comments").insert(row).select().single();

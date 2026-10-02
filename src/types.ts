@@ -160,6 +160,7 @@ export interface TaskComment {
   authorEmail: string;
   text: string;
   timestamp: string;
+  images?: string[];
 }
 
 export interface LayoutCritiqueResponse {

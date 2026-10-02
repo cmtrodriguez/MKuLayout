@@ -1,6 +1,60 @@
 import React from "react";
 import { TaskComment } from "../types";
 
+export const MAX_COMMENT_IMAGES = 5;
+const MAX_COMMENT_IMAGE_BYTES = 120 * 1024;
+const MAX_SOURCE_IMAGE_BYTES = 12 * 1024 * 1024;
+
+export async function compressCommentImage(file: File): Promise<string> {
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+    throw new Error(`${file.name}: choose a JPG, PNG, or WebP image.`);
+  }
+  if (file.size > MAX_SOURCE_IMAGE_BYTES) {
+    throw new Error(`${file.name}: image must be 12 MB or smaller.`);
+  }
+
+  const bitmap = await createImageBitmap(file);
+  try {
+    let scale = Math.min(1, 1280 / bitmap.width, 1280 / bitmap.height);
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Could not process this image.");
+
+    const renderJpeg = (quality: number) => new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("Could not compress this image.")), "image/jpeg", quality);
+    });
+    let blob: Blob;
+    do {
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+      context.fillStyle = "#fff";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+
+      let quality = 0.82;
+      blob = await renderJpeg(quality);
+      while (blob.size > MAX_COMMENT_IMAGE_BYTES && quality > 0.5) {
+        quality = Math.max(0.5, quality - 0.08);
+        blob = await renderJpeg(quality);
+      }
+      if (blob.size > MAX_COMMENT_IMAGE_BYTES) scale *= 0.8;
+    } while (blob.size > MAX_COMMENT_IMAGE_BYTES && scale >= 0.35);
+
+    if (blob.size > MAX_COMMENT_IMAGE_BYTES) {
+      throw new Error(`${file.name}: image could not be compressed enough. Try a smaller image.`);
+    }
+
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("Could not read this image."));
+      reader.onerror = () => reject(new Error("Could not read this image."));
+      reader.readAsDataURL(blob);
+    });
+  } finally {
+    bitmap.close();
+  }
+}
+
 export function formatCommentDetails(c: { authorName: string; text: string; authorEmail?: string }, defaultRole?: string) {
   let text = c.text || "";
 

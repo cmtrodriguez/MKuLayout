@@ -715,14 +715,15 @@ export default function App() {
     };
   }, []);
 
-  const handleAddCommentSimple = (commentText: string, taskId: string) => {
+  const handleAddCommentSimple = (commentText: string, taskId: string, images: string[] = []) => {
     const newComment: TaskComment = {
       id: `comment-${Date.now()}`,
       taskId,
       authorName: userName,
       authorEmail: userEmail,
       text: commentText,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      ...(images.length ? { images } : {})
     };
     const updated = [...comments, newComment];
     setComments(updated);

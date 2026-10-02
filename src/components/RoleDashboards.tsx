@@ -1,13 +1,13 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { 
   CheckSquare, Link, Clock, Plus, Award, ClipboardList, ShieldCheck, 
   XCircle, Sparkles, AlertCircle, MessageCircle, FileDown, ExternalLink,
   ChevronRight, Calendar, User, Eye, Play, BookOpen, Search, Folder, LayoutGrid, CheckCircle, Send,
-  Lock, ShieldAlert
+  Lock, ShieldAlert, ImagePlus, X
 } from "lucide-react";
 import { Task, TeamMember, TaskComment, UserRole } from "../types";
 import { extractHyperlinkDetails } from "../lib/canvaTemplates";
-import { formatCommentDetails, handleBulletKeyDown, RenderFormattedComment } from "../lib/commentUtils";
+import { compressCommentImage, formatCommentDetails, handleBulletKeyDown, MAX_COMMENT_IMAGES, RenderFormattedComment } from "../lib/commentUtils";
 import { isUserAssignedToTask, resolveMemberEmail, getEditorDeputyEmails } from "../lib/memberUtils";
 
 // ==========================================
@@ -19,7 +19,7 @@ interface LayoutStaffDashboardProps {
   currentUserName: string;
   speechEnabled: boolean;
   onUpdateTask: (task: Task) => void;
-  onAddComment: (commentText: string, taskId: string) => void;
+  onAddComment: (commentText: string, taskId: string, images?: string[]) => void;
   comments?: TaskComment[];
   onAddNotification: (title: string, message: string, type: 'info' | 'assignment' | 'deadline' | 'revision' | 'poll' | 'birthday', targetEmails?: string[]) => void;
 }
@@ -35,6 +35,10 @@ export function LayoutStaffDashboard({
   onAddNotification,
 }: LayoutStaffDashboardProps) {
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
+  const [commentImages, setCommentImages] = useState<Record<string, string[]>>({});
+  const [preparingCommentImages, setPreparingCommentImages] = useState<Record<string, boolean>>({});
+  const [commentImageErrors, setCommentImageErrors] = useState<Record<string, string>>({});
+  const commentImageInputs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const speakText = (text: string) => {
     if (!speechEnabled) return;
@@ -46,10 +50,39 @@ export function LayoutStaffDashboard({
 
   const handleSendTaskComment = (taskId: string) => {
     const text = commentInputs[taskId]?.trim();
-    if (!text) return;
-    onAddComment(text, taskId);
+    const images = commentImages[taskId] || [];
+    if ((!text && images.length === 0) || preparingCommentImages[taskId]) return;
+    onAddComment(text || "", taskId, images);
     setCommentInputs(prev => ({ ...prev, [taskId]: "" }));
+    setCommentImages(prev => ({ ...prev, [taskId]: [] }));
+    setCommentImageErrors(prev => ({ ...prev, [taskId]: "" }));
     speakText("Comment sent to editor.");
+  };
+
+  const handleSelectTaskCommentImages = async (taskId: string, event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.currentTarget.files || []);
+    event.currentTarget.value = "";
+    const currentImages = commentImages[taskId] || [];
+    const availableSlots = MAX_COMMENT_IMAGES - currentImages.length;
+    if (files.length === 0) return;
+    if (availableSlots <= 0) {
+      setCommentImageErrors(prev => ({ ...prev, [taskId]: "A message can include up to 5 pictures." }));
+      return;
+    }
+
+    setPreparingCommentImages(prev => ({ ...prev, [taskId]: true }));
+    let errorMessage = files.length > availableSlots ? "Only 5 pictures can be attached to one message." : "";
+    const preparedImages: string[] = [];
+    for (const file of files.slice(0, availableSlots)) {
+      try {
+        preparedImages.push(await compressCommentImage(file));
+      } catch (error) {
+        errorMessage = error instanceof Error ? error.message : "Could not add this image.";
+      }
+    }
+    setCommentImages(prev => ({ ...prev, [taskId]: [...(prev[taskId] || []), ...preparedImages].slice(0, MAX_COMMENT_IMAGES) }));
+    setCommentImageErrors(prev => ({ ...prev, [taskId]: errorMessage }));
+    setPreparingCommentImages(prev => ({ ...prev, [taskId]: false }));
   };
 
   // Completed and shelved assignments are hidden from the active "My Assignments" list.
@@ -351,6 +384,15 @@ export function LayoutStaffDashboard({
                               <div className="pl-6 sm:pl-8">
                                 <RenderFormattedComment text={cleanedText} isEditorRole={isEditorRole} />
                               </div>
+                              {c.images && c.images.length > 0 && (
+                                <div className="pl-6 sm:pl-8 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                  {c.images.slice(0, MAX_COMMENT_IMAGES).map((image, imageIndex) => (
+                                    <a key={`${c.id}-${imageIndex}`} href={image} target="_blank" rel="noreferrer" className="block aspect-square overflow-hidden rounded-lg border border-gray-200 bg-neutral-100">
+                                      <img src={image} alt={`Comment attachment ${imageIndex + 1}`} loading="lazy" className="w-full h-full object-cover" />
+                                    </a>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           );
                         })}
@@ -359,6 +401,38 @@ export function LayoutStaffDashboard({
 
                     {/* Inline Reply/Comment Input */}
                     <div className="space-y-1 pt-1">
+                      <input
+                        ref={(element) => { commentImageInputs.current[task.id] = element; }}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        multiple
+                        onChange={(event) => handleSelectTaskCommentImages(task.id, event)}
+                        className="hidden"
+                        aria-label="Choose pictures to attach"
+                      />
+                      {(commentImages[task.id] || []).length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {(commentImages[task.id] || []).map((image, imageIndex) => (
+                            <div key={image} className="relative w-12 h-12 rounded-lg overflow-hidden border border-gray-200">
+                              <img src={image} alt={`Attachment preview ${imageIndex + 1}`} className="w-full h-full object-cover" />
+                              <button
+                                type="button"
+                                onClick={() => setCommentImages(prev => ({ ...prev, [task.id]: (prev[task.id] || []).filter((_, index) => index !== imageIndex) }))}
+                                className="absolute top-0.5 right-0.5 p-0.5 rounded-full bg-black/70 text-white cursor-pointer"
+                                aria-label={`Remove picture ${imageIndex + 1}`}
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
+                          <span className="self-center text-[10px] text-gray-500">{commentImages[task.id].length}/{MAX_COMMENT_IMAGES}</span>
+                        </div>
+                      )}
+                      {(commentImageErrors[task.id] || preparingCommentImages[task.id]) && (
+                        <p role={commentImageErrors[task.id] ? "alert" : "status"} className="text-[10px] text-rose-600">
+                          {preparingCommentImages[task.id] ? "Preparing pictures…" : commentImageErrors[task.id]}
+                        </p>
+                      )}
                       <div className="flex items-start gap-1.5 sm:gap-2">
                         <textarea
                           placeholder="Reply to editor... (Enter for new line)"
@@ -376,8 +450,19 @@ export function LayoutStaffDashboard({
                           }}
                         />
                         <button
+                          type="button"
+                          onClick={() => commentImageInputs.current[task.id]?.click()}
+                          disabled={preparingCommentImages[task.id] || (commentImages[task.id] || []).length >= MAX_COMMENT_IMAGES}
+                          className="p-2 border border-gray-200 bg-white text-gray-600 hover:text-brand-maroon rounded-lg disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer self-stretch"
+                          aria-label={`Attach pictures (${(commentImages[task.id] || []).length} of ${MAX_COMMENT_IMAGES})`}
+                          title={`Attach pictures (${(commentImages[task.id] || []).length}/${MAX_COMMENT_IMAGES})`}
+                        >
+                          <ImagePlus className="w-4 h-4" />
+                        </button>
+                        <button
                           onClick={() => handleSendTaskComment(task.id)}
-                          className="px-2.5 py-2 sm:px-3.5 sm:py-2.5 bg-neutral-900 hover:bg-black text-white text-[11px] sm:text-xs font-bold rounded-lg sm:rounded-xl transition-all shrink-0 cursor-pointer flex items-center gap-1 shadow-2xs self-stretch"
+                          disabled={preparingCommentImages[task.id] || (!(commentInputs[task.id] || "").trim() && (commentImages[task.id] || []).length === 0)}
+                          className="px-2.5 py-2 sm:px-3.5 sm:py-2.5 bg-neutral-900 hover:bg-black text-white text-[11px] sm:text-xs font-bold rounded-lg sm:rounded-xl transition-all shrink-0 cursor-pointer flex items-center gap-1 shadow-2xs self-stretch disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           <Send className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-300" />
                           <span className="hidden sm:inline">Post Comment</span>
