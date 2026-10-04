@@ -359,11 +359,83 @@ export default function TaskDetailsModal({
               )}
             </div>
 
+            {/* Medium Canva Link Editor */}
+            <div className="bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/60 p-3 sm:p-3.5 rounded-xl space-y-2 text-xs">
+              <span className="font-bold text-blue-800 dark:text-blue-400 uppercase tracking-wide flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                Medium Canva Link
+              </span>
+              {task.mediumCanvaLink ? (
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[10px] text-blue-900 dark:text-blue-200 font-mono truncate bg-white dark:bg-neutral-800 px-2 py-1 rounded border border-blue-100 dark:border-blue-800 flex-1">
+                    {extractHyperlinkDetails(task.mediumCanvaLink).label || task.mediumCanvaLink}
+                  </p>
+                  <a href={extractHyperlinkDetails(task.mediumCanvaLink).url} target="_blank" rel="noopener noreferrer" className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-[10px] flex items-center gap-1 shrink-0 shadow-sm cursor-pointer">Launch</a>
+                </div>
+              ) : (
+                <p className="text-[10px] text-gray-500 dark:text-neutral-400 italic">No Medium Canva link attached yet.</p>
+              )}
+              {isEditorOrDeputy && (
+                <div className="space-y-1">
+                  <label className="text-[9px] text-gray-400 dark:text-neutral-400 font-semibold block">Update/Attach Medium Canva Link</label>
+                  <input
+                    type="text"
+                    placeholder="https://www.canva.com/design/..."
+                    defaultValue={task.mediumCanvaLink || ""}
+                    onBlur={(event) => {
+                      const value = event.target.value.trim();
+                      if (value !== (task.mediumCanvaLink || "")) {
+                        onUpdateTask({ ...task, mediumCanvaLink: value, lastUpdated: new Date().toISOString() });
+                        speakText("Medium Canva link saved and synchronized.");
+                      }
+                    }}
+                    className="w-full px-2 py-1 border border-blue-200/60 dark:border-blue-800/60 rounded-lg text-xs outline-none bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 focus:ring-1 focus:ring-blue-500 font-mono"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* ArtX Document Link Editor */}
+            <div className="bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-800/60 p-3 sm:p-3.5 rounded-xl space-y-2 text-xs">
+              <span className="font-bold text-rose-800 dark:text-rose-400 uppercase tracking-wide flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                ArtX Document Link
+              </span>
+              {task.draftLink ? (
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[10px] text-rose-900 dark:text-rose-200 font-mono truncate bg-white dark:bg-neutral-800 px-2 py-1 rounded border border-rose-100 dark:border-rose-800 flex-1">
+                    {extractHyperlinkDetails(task.draftLink).label || task.draftLink}
+                  </p>
+                  <a href={extractHyperlinkDetails(task.draftLink).url} target="_blank" rel="noopener noreferrer" className="px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-[10px] flex items-center gap-1 shrink-0 shadow-sm cursor-pointer">Launch</a>
+                </div>
+              ) : (
+                <p className="text-[10px] text-gray-500 dark:text-neutral-400 italic">No ArtX document link attached yet.</p>
+              )}
+              {isEditorOrDeputy && (
+                <div className="space-y-1">
+                  <label className="text-[9px] text-gray-400 dark:text-neutral-400 font-semibold block">Update/Attach ArtX Document Link</label>
+                  <input
+                    type="text"
+                    placeholder="https://docs.google.com/document/..."
+                    defaultValue={task.draftLink || ""}
+                    onBlur={(event) => {
+                      const value = event.target.value.trim();
+                      if (value !== (task.draftLink || "")) {
+                        onUpdateTask({ ...task, draftLink: value, lastUpdated: new Date().toISOString() });
+                        speakText("ArtX document link saved and synchronized.");
+                      }
+                    }}
+                    className="w-full px-2 py-1 border border-rose-200/60 dark:border-rose-800/60 rounded-lg text-xs outline-none bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 focus:ring-1 focus:ring-rose-500 font-mono"
+                  />
+                </div>
+              )}
+            </div>
+
             {/* Illustration Link Editor */}
             <div className="bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/60 p-3 sm:p-3.5 rounded-xl space-y-2 text-xs">
               <span className="font-bold text-emerald-800 dark:text-emerald-400 uppercase tracking-wide flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Illustration Link
+                Illustration/Photo Link
               </span>
               
               {task.pubmatLink ? (
@@ -381,12 +453,12 @@ export default function TaskDetailsModal({
                   </a>
                 </div>
               ) : (
-                <p className="text-[10px] text-gray-500 dark:text-neutral-400 italic">No illustration link attached yet.</p>
+                <p className="text-[10px] text-gray-500 dark:text-neutral-400 italic">No illustration/photo link attached yet.</p>
               )}
 
               {isEditorOrDeputy && (
                 <div className="space-y-1">
-                  <label className="text-[9px] text-gray-400 dark:text-neutral-400 font-semibold block">Update Illustration Link</label>
+                  <label className="text-[9px] text-gray-400 dark:text-neutral-400 font-semibold block">Update Illustration/Photo Link</label>
                   <input
                     type="text"
                     placeholder="https://drive.google.com/..."
@@ -399,7 +471,7 @@ export default function TaskDetailsModal({
                           pubmatLink: val,
                           lastUpdated: new Date().toISOString()
                         });
-                        speakText("Illustration link saved and synchronized.");
+                        speakText("Illustration/photo link saved and synchronized.");
                       }
                     }}
                     className="w-full px-2 py-1 border border-emerald-200/60 dark:border-emerald-800/60 rounded-lg text-xs outline-none bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 focus:ring-1 focus:ring-emerald-500 font-mono"

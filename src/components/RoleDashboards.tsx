@@ -272,7 +272,7 @@ export function LayoutStaffDashboard({
                   )}
 
                   {/* Direct Link Action Cards Row (3 Clean Buttons, always one row) */}
-                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                  <div className="grid grid-cols-2 xl:grid-cols-4 gap-2 sm:gap-3">
                     {/* 1. ArtX Writer Draft Link */}
                     {(() => {
                       const docRaw = task.draftLink || task.addedToLayout || task.writeup || "";
@@ -329,6 +329,35 @@ export function LayoutStaffDashboard({
                         <div className="flex items-center gap-2 sm:gap-2.5 p-2 sm:p-3 bg-gray-50 border border-dashed border-gray-200 rounded-lg sm:rounded-xl text-gray-400 text-xs">
                           <LayoutGrid className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                           <span className="font-medium text-[10px] sm:text-[11px]">No Canva Link Assigned</span>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Medium Canva Design Link */}
+                    {(() => {
+                      const mediumCanva = extractHyperlinkDetails(task.mediumCanvaLink || "");
+                      const hasMediumCanva = mediumCanva.url && mediumCanva.url.startsWith("http");
+
+                      return hasMediumCanva ? (
+                        <a
+                          href={mediumCanva.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-between p-2.5 sm:p-3 bg-blue-50/80 hover:bg-blue-100 border border-blue-200/80 rounded-lg sm:rounded-xl transition-all group cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+                            <LayoutGrid className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-700 shrink-0" />
+                            <div className="min-w-0 text-left">
+                              <span className="block text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-blue-700">Medium Canva Link</span>
+                              <span className="block text-[11px] sm:text-xs font-semibold text-blue-900 truncate">{mediumCanva.label || "Open Medium Canva"}</span>
+                            </div>
+                          </div>
+                          <ExternalLink className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-blue-700 group-hover:translate-x-0.5 transition-transform shrink-0" />
+                        </a>
+                      ) : (
+                        <div className="flex items-center gap-2 sm:gap-2.5 p-2 sm:p-3 bg-gray-50 border border-dashed border-gray-200 rounded-lg sm:rounded-xl text-gray-400 text-xs">
+                          <LayoutGrid className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                          <span className="font-medium text-[10px] sm:text-[11px]">No Medium Canva Link</span>
                         </div>
                       );
                     })()}

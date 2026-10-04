@@ -354,6 +354,7 @@ export default function AssignmentsList({
               addedToLayout: editForm.addedToLayout || t.addedToLayout,
               pubmatLink: editForm.pubmatLink || t.pubmatLink,
               canvaLink: editForm.canvaLink || t.canvaLink,
+              mediumCanvaLink: editForm.mediumCanvaLink ?? t.mediumCanvaLink,
               writeup: editForm.writeup || t.writeup,
               releaseDate: editForm.releaseDate || t.releaseDate,
               lastUpdated: new Date().toISOString()

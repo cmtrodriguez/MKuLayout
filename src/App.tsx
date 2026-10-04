@@ -2306,6 +2306,7 @@ export default function App() {
                 addedToLayout: updatedTask.addedToLayout || updatedList[companionIndex].addedToLayout,
                 pubmatLink: updatedTask.pubmatLink || updatedList[companionIndex].pubmatLink,
                 canvaLink: updatedTask.canvaLink || updatedList[companionIndex].canvaLink,
+                mediumCanvaLink: updatedTask.mediumCanvaLink ?? updatedList[companionIndex].mediumCanvaLink,
                 writeup: updatedTask.writeup || updatedList[companionIndex].writeup,
                 lastUpdated: new Date().toISOString()
               };

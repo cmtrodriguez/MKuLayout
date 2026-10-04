@@ -108,6 +108,7 @@ export interface Task {
   revisionCount: number;
   lastUpdated: string;
   canvaLink?: string; // e.g. Canva design link for staff
+  mediumCanvaLink?: string;
   pubmatLink?: string; // Google Drive or Illustration link for pubmat
   isPendingConfirmation?: boolean;
   draftLink?: string;
