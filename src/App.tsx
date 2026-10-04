@@ -23,7 +23,7 @@ import { OFFICIAL_MEMBERS_MAP, getPreferredFirstName, resolveLayoutAssignee, res
 import { AccentTheme, applyAccentCssVars } from "./lib/accentTheme";
 import { seededUuid } from "./lib/seededUuid";
 import { getPubmatCanvaTemplates } from "./lib/canvaTemplates";
-import { supabase, fetchUserProfileByEmail, fetchTasks, fetchMembers, fetchComments, fetchCalendarEvents, fetchPolls, fetchAnnouncements, fetchNotifications, fetchIssueSheets, upsertTask, deleteTask, upsertMember, createComment, upsertCalendarEvent, deleteCalendarEvent, createPoll, updatePollOptionVotes, deletePoll, createNotification, markNotificationRead, createAnnouncement, saveIssueSheets, subscribeToLayoutRealtime } from "./lib/supabase";
+import { supabase, fetchUserProfileByEmail, fetchTasks, fetchMembers, fetchComments, fetchCalendarEvents, fetchPolls, fetchAnnouncements, fetchNotifications, fetchIssueSheets, upsertTask, deleteTask, upsertMember, createComment, updateComment, upsertCalendarEvent, deleteCalendarEvent, createPoll, updatePollOptionVotes, deletePoll, createNotification, markNotificationRead, createAnnouncement, saveIssueSheets, subscribeToLayoutRealtime } from "./lib/supabase";
 import mkuleImg from "./mkule.png";
 
 // Domain Models
@@ -463,10 +463,21 @@ export default function App() {
   };
 
   const handleAddComment = (newComment: TaskComment) => {
-    const updated = [...comments, newComment];
-    setComments(updated);
-    createComment(newComment).catch(() => {});
+    setComments((prev) => [...prev, newComment]);
+    createComment(newComment).then((saved) => {
+      if (saved) setComments((prev) => prev.map((comment) => comment.id === newComment.id ? saved : comment));
+    }).catch(() => {});
   };
+
+  const handleUpdateComment = async (comment: TaskComment): Promise<boolean> => {
+    const saved = await updateComment(comment);
+    if (!saved) return false;
+    setComments((prev) => prev.map((item) => item.id === saved.id ? saved : item));
+    return true;
+  };
+
+  const handleRemoveComment = (comment: TaskComment): Promise<boolean> =>
+    handleUpdateComment({ ...comment, removedAt: new Date().toISOString() });
 
   const AUTH_SESSION_KEY = "mkule_auth_session";
   const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
@@ -717,7 +728,7 @@ export default function App() {
 
   const handleAddCommentSimple = (commentText: string, taskId: string, images: string[] = []) => {
     const newComment: TaskComment = {
-      id: `comment-${Date.now()}`,
+      id: crypto.randomUUID(),
       taskId,
       authorName: userName,
       authorEmail: userEmail,
@@ -725,9 +736,10 @@ export default function App() {
       timestamp: new Date().toISOString(),
       ...(images.length ? { images } : {})
     };
-    const updated = [...comments, newComment];
-    setComments(updated);
-    createComment(newComment).catch(() => {});
+    setComments((prev) => [...prev, newComment]);
+    createComment(newComment).then((saved) => {
+      if (saved) setComments((prev) => prev.map((comment) => comment.id === newComment.id ? saved : comment));
+    }).catch(() => {});
 
     // Alert only the people this comment concerns: the assigned artist when a
     // leader reviews, or the editor/deputy desk when a staffer replies.
@@ -1520,6 +1532,8 @@ export default function App() {
                   handleUpdateTasks(updatedList);
                 }}
                 onAddComment={handleAddCommentSimple}
+                onUpdateComment={handleUpdateComment}
+                onRemoveComment={handleRemoveComment}
                 comments={comments}
                 onAddNotification={handleAddNotification}
               />
@@ -2263,6 +2277,8 @@ export default function App() {
           }
           setSelectedTask(null);
         }}
+        onUpdateComment={handleUpdateComment}
+        onRemoveComment={handleRemoveComment}
         onUpdateTask={(updatedTask) => {
           setSelectedTask(updatedTask);
           let updatedList = tasks.map(t => t.id === updatedTask.id ? updatedTask : t);

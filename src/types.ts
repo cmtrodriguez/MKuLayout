@@ -161,6 +161,8 @@ export interface TaskComment {
   text: string;
   timestamp: string;
   images?: string[];
+  editedAt?: string;
+  removedAt?: string;
 }
 
 export interface LayoutCritiqueResponse {

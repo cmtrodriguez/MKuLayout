@@ -1,7 +1,7 @@
 import React, { useRef, useState } from "react";
 import { 
   X, MessageSquare, Link, ExternalLink, Sparkles, Clock, AlertTriangle, 
-  Trash2, User, FileText, Send, Calendar, RefreshCw, Lock, ImagePlus
+  Trash2, User, FileText, Send, Calendar, RefreshCw, Lock, ImagePlus, Pencil
 } from "lucide-react";
 import { Task, TeamMember, TaskComment, TaskStatus, TaskPriority } from "../types";
 import { extractHyperlinkDetails } from "../lib/canvaTemplates";
@@ -25,6 +25,8 @@ interface TaskDetailsModalProps {
   onUpdateTask: (task: Task) => void;
   onDeleteTask?: (task: Task) => void;
   onAddComment: (comment: TaskComment) => void;
+  onUpdateComment: (comment: TaskComment) => Promise<boolean>;
+  onRemoveComment: (comment: TaskComment) => Promise<boolean>;
   onTriggerCritiqueTab?: (task: Task) => void;
 }
 
@@ -40,6 +42,8 @@ export default function TaskDetailsModal({
   onUpdateTask,
   onDeleteTask,
   onAddComment,
+  onUpdateComment,
+  onRemoveComment,
   onTriggerCritiqueTab,
 }: TaskDetailsModalProps) {
   const [commentText, setCommentText] = useState("");
@@ -47,6 +51,10 @@ export default function TaskDetailsModal({
   const [isPreparingImages, setIsPreparingImages] = useState(false);
   const [imageError, setImageError] = useState("");
   const imageInput = useRef<HTMLInputElement>(null);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editCommentText, setEditCommentText] = useState("");
+  const [savingCommentId, setSavingCommentId] = useState<string | null>(null);
+  const [commentActionError, setCommentActionError] = useState("");
   const isEditorOrDeputy = currentUserRole === "Layout Editor" || currentUserRole === "Layout Deputy" || currentUserRole === "Online Layout Head";
 
   const isAssignedStaffer = (task.illusLayout || "").toLowerCase().includes((currentUserName || "").toLowerCase()) || 
@@ -74,6 +82,29 @@ export default function TaskDetailsModal({
   };
 
   const taskComments = comments.filter((c) => c.taskId === task.id);
+
+  const handleSaveComment = async (comment: TaskComment) => {
+    const updatedText = editCommentText.trim();
+    if (!updatedText && !comment.images?.length) {
+      setCommentActionError("A message needs text or an attached picture.");
+      return;
+    }
+    setSavingCommentId(comment.id);
+    setCommentActionError("");
+    const saved = await onUpdateComment({ ...comment, text: updatedText, editedAt: new Date().toISOString() });
+    setSavingCommentId(null);
+    if (saved) setEditingCommentId(null);
+    else setCommentActionError("Could not save the edit. Try again.");
+  };
+
+  const handleRemoveComment = async (comment: TaskComment) => {
+    if (!window.confirm("Remove this message? It will remain in the record as removed.")) return;
+    setSavingCommentId(comment.id);
+    setCommentActionError("");
+    const saved = await onRemoveComment(comment);
+    setSavingCommentId(null);
+    if (!saved) setCommentActionError("Could not remove the message. Try again.");
+  };
 
   const handleSelectCommentImages = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.currentTarget.files || []);
@@ -127,7 +158,7 @@ export default function TaskDetailsModal({
     if ((!commentText.trim() && commentImages.length === 0) || isPreparingImages) return;
     
     const newComment: TaskComment = {
-      id: `comment-${Date.now()}`,
+      id: crypto.randomUUID(),
       taskId: task.id,
       authorName: currentUserName,
       authorEmail: currentUserEmail,
@@ -464,14 +495,59 @@ export default function TaskDetailsModal({
                               {roleLabel}
                             </span>
                           </div>
-                          <span className="text-[10px] text-gray-400 dark:text-neutral-400 font-mono">
-                            {new Date(com.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-gray-400 dark:text-neutral-400 font-mono">
+                              {new Date(com.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                            {currentUserEmail && com.authorEmail?.trim().toLowerCase() === currentUserEmail.trim().toLowerCase() && !com.removedAt && (
+                              <span className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => { setEditingCommentId(com.id); setEditCommentText(com.text); setCommentActionError(""); }}
+                                  disabled={savingCommentId === com.id}
+                                  className="p-1 text-neutral-500 hover:text-brand-maroon dark:hover:text-red-300 rounded cursor-pointer disabled:opacity-40"
+                                  aria-label="Edit your message"
+                                  title="Edit message"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveComment(com)}
+                                  disabled={savingCommentId === com.id}
+                                  className="p-1 text-neutral-500 hover:text-rose-600 rounded cursor-pointer disabled:opacity-40"
+                                  aria-label="Remove your message"
+                                  title="Remove message"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className="pl-6 pt-1 text-gray-800 dark:text-neutral-200">
-                          <RenderFormattedComment text={cleanedText} isEditorRole={roleLabel.includes("Editor") || roleLabel.includes("EIC")} />
-                        </div>
-                        {com.images && com.images.length > 0 && (
+                        {com.removedAt ? (
+                          <p className="pl-6 pt-1 text-xs text-neutral-400 italic">Message removed</p>
+                        ) : editingCommentId === com.id ? (
+                          <div className="pl-6 pt-1 space-y-2">
+                            <textarea
+                              value={editCommentText}
+                              onChange={(event) => setEditCommentText(event.target.value)}
+                              rows={3}
+                              className="w-full px-2.5 py-2 border border-neutral-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-900 text-xs text-neutral-800 dark:text-neutral-100 outline-none focus:ring-2 focus:ring-brand-maroon resize-y"
+                              aria-label="Edit your message"
+                            />
+                            <div className="flex justify-end gap-2">
+                              <button type="button" onClick={() => setEditingCommentId(null)} className="px-2.5 py-1 text-xs text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-md cursor-pointer">Cancel</button>
+                              <button type="button" onClick={() => handleSaveComment(com)} disabled={savingCommentId === com.id} className="px-2.5 py-1 text-xs font-semibold bg-brand-maroon text-white rounded-md cursor-pointer disabled:opacity-50">{savingCommentId === com.id ? "Saving…" : "Save"}</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="pl-6 pt-1 text-gray-800 dark:text-neutral-200">
+                              <RenderFormattedComment text={cleanedText} isEditorRole={roleLabel.includes("Editor") || roleLabel.includes("EIC")} />
+                              {com.editedAt && <span className="mt-1 block text-[9px] text-neutral-400 italic">Edited</span>}
+                            </div>
+                            {com.images && com.images.length > 0 && (
                           <div className="pl-6 grid grid-cols-2 gap-2">
                             {com.images.slice(0, MAX_COMMENT_IMAGES).map((image, index) => (
                               <div key={`${com.id}-${index}`} className="aspect-square overflow-hidden rounded-lg border border-gray-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-900">
@@ -479,11 +555,14 @@ export default function TaskDetailsModal({
                               </div>
                             ))}
                           </div>
+                            )}
+                          </>
                         )}
                       </div>
                     );
                   })
                 )}
+                {commentActionError && <p role="alert" className="text-[10px] text-rose-600 dark:text-rose-400">{commentActionError}</p>}
               </div>
             )}
           </div>

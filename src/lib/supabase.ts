@@ -297,11 +297,15 @@ export function commentFromDb(row: any): TaskComment {
   const storedText = row.text || "";
   let text = storedText;
   let images: string[] | undefined;
+  let editedAt: string | undefined;
+  let removedAt: string | undefined;
   if (storedText.startsWith(COMMENT_IMAGE_ENVELOPE)) {
     try {
       const payload = JSON.parse(storedText.slice(COMMENT_IMAGE_ENVELOPE.length));
       text = typeof payload.text === "string" ? payload.text : "";
       images = Array.isArray(payload.images) ? payload.images.filter(isCommentImageDataUrl).slice(0, 5) : [];
+      editedAt = typeof payload.editedAt === "string" ? payload.editedAt : undefined;
+      removedAt = typeof payload.removedAt === "string" ? payload.removedAt : undefined;
     } catch {
       text = storedText;
     }
@@ -313,8 +317,22 @@ export function commentFromDb(row: any): TaskComment {
     authorEmail: row.author_email || "",
     text,
     timestamp: row.timestamp || row.created_at || new Date().toISOString(),
-    ...(images?.length ? { images } : {})
+    ...(images?.length ? { images } : {}),
+    ...(editedAt ? { editedAt } : {}),
+    ...(removedAt ? { removedAt } : {})
   };
+}
+
+function commentTextForDb(comment: Partial<TaskComment>): string {
+  const images = Array.isArray(comment.images) ? comment.images.filter(isCommentImageDataUrl).slice(0, 5) : [];
+  const text = comment.text || "";
+  if (!images.length && !comment.editedAt && !comment.removedAt) return text;
+  return `${COMMENT_IMAGE_ENVELOPE}${JSON.stringify({
+    text,
+    images,
+    ...(comment.editedAt ? { editedAt: comment.editedAt } : {}),
+    ...(comment.removedAt ? { removedAt: comment.removedAt } : {})
+  })}`;
 }
 
 export async function fetchComments(taskId?: string): Promise<TaskComment[]> {
@@ -331,8 +349,8 @@ export async function fetchComments(taskId?: string): Promise<TaskComment[]> {
 
 export async function createComment(comment: Partial<TaskComment>): Promise<TaskComment | null> {
   if (!supabase || !comment.taskId) return null;
-  const images = Array.isArray(comment.images) ? comment.images.filter(isCommentImageDataUrl).slice(0, 5) : [];
   const text = comment.text || "";
+  const images = Array.isArray(comment.images) ? comment.images.filter(isCommentImageDataUrl).slice(0, 5) : [];
   if (!text.trim() && images.length === 0) return null;
   const id = ensureUuid(comment.id);
   const row = {
@@ -340,12 +358,27 @@ export async function createComment(comment: Partial<TaskComment>): Promise<Task
     task_id: comment.taskId,
     author_name: comment.authorName || "Staff",
     author_email: comment.authorEmail || "",
-    text: images.length ? `${COMMENT_IMAGE_ENVELOPE}${JSON.stringify({ text, images })}` : text,
+    text: commentTextForDb(comment),
     timestamp: comment.timestamp ? new Date(comment.timestamp).toISOString() : new Date().toISOString()
   };
   const { data, error } = await supabase.from("task_comments").insert(row).select().single();
   if (error) {
     console.error("Error creating comment:", error.message);
+    return null;
+  }
+  return commentFromDb(data);
+}
+
+export async function updateComment(comment: Partial<TaskComment>): Promise<TaskComment | null> {
+  if (!supabase || !comment.id) return null;
+  const { data, error } = await supabase
+    .from("task_comments")
+    .update({ text: commentTextForDb(comment) })
+    .eq("id", comment.id)
+    .select()
+    .maybeSingle();
+  if (error || !data) {
+    if (error) console.error("Error updating comment:", error.message);
     return null;
   }
   return commentFromDb(data);
