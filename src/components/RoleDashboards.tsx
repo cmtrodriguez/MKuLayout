@@ -9,6 +9,7 @@ import { Task, TeamMember, TaskComment, UserRole } from "../types";
 import { extractHyperlinkDetails } from "../lib/canvaTemplates";
 import { compressCommentImage, formatCommentDetails, handleBulletKeyDown, MAX_COMMENT_IMAGES, RenderFormattedComment } from "../lib/commentUtils";
 import { isUserAssignedToTask, resolveMemberEmail, getEditorDeputyEmails } from "../lib/memberUtils";
+import CommentImageAnnotator from "./CommentImageAnnotator";
 
 // ==========================================
 // 1. LAYOUT STAFF DASHBOARD
@@ -414,7 +415,14 @@ export function LayoutStaffDashboard({
                         <div className="flex flex-wrap gap-2">
                           {(commentImages[task.id] || []).map((image, imageIndex) => (
                             <div key={image} className="relative w-12 h-12 rounded-lg overflow-hidden border border-gray-200">
-                              <img src={image} alt={`Attachment preview ${imageIndex + 1}`} className="w-full h-full object-cover" />
+                              <CommentImageAnnotator
+                                image={image}
+                                label={`Annotate picture ${imageIndex + 1}`}
+                                onSave={(annotatedImage) => setCommentImages(prev => ({
+                                  ...prev,
+                                  [task.id]: (prev[task.id] || []).map((item, index) => index === imageIndex ? annotatedImage : item),
+                                }))}
+                              />
                               <button
                                 type="button"
                                 onClick={() => setCommentImages(prev => ({ ...prev, [task.id]: (prev[task.id] || []).filter((_, index) => index !== imageIndex) }))}

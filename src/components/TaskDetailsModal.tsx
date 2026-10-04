@@ -11,6 +11,7 @@ import { getPreferredFirstName } from "../lib/memberUtils";
 import { toISOFormatDate, formatISOToDisplayDate } from "./AssignmentsList";
 import GoogleDocShareWidget from "./GoogleDocShareWidget";
 import { shareGoogleDocWithMember } from "../lib/googleDriveShare";
+import CommentImageAnnotator from "./CommentImageAnnotator";
 
 interface TaskDetailsModalProps {
   task: Task;
@@ -503,7 +504,11 @@ export default function TaskDetailsModal({
                 <div className="flex flex-wrap gap-2">
                   {commentImages.map((image, index) => (
                     <div key={image} className="relative w-14 h-14 rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-700">
-                      <img src={image} alt={`Attachment preview ${index + 1}`} className="w-full h-full object-cover" />
+                      <CommentImageAnnotator
+                        image={image}
+                        label={`Annotate picture ${index + 1}`}
+                        onSave={(annotatedImage) => setCommentImages((current) => current.map((item, imageIndex) => imageIndex === index ? annotatedImage : item))}
+                      />
                       <button
                         type="button"
                         onClick={() => setCommentImages((current) => current.filter((_, imageIndex) => imageIndex !== index))}
