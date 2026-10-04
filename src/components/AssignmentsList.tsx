@@ -6,7 +6,7 @@ import {
   FileText, CheckCircle2, Loader2, RefreshCw
 } from "lucide-react";
 import { Task, TeamMember } from "../types";
-import { getAllCanvaTemplates, extractHyperlinkDetails } from "../lib/canvaTemplates";
+import { getAllCanvaTemplates, extractHyperlinkDetails, getCanvaLinkForContent, isOnlinePubmatTask, MEDIUM_CANVA_LINK, normalizeContentCategory } from "../lib/canvaTemplates";
 import GoogleDocShareWidget from "./GoogleDocShareWidget";
 import GoogleDocConfirmModal from "./GoogleDocConfirmModal";
 import { shareGoogleDocWithMember } from "../lib/googleDriveShare";
@@ -105,19 +105,12 @@ export default function AssignmentsList({
   } | null>(null);
 
   const executeDispatch = (task: Task, activeForm: Task) => {
-    const templates = getAllCanvaTemplates();
-
     // Auto-resolve Canva link from template if not already explicitly specified
-    let resolvedCanvaLink = activeForm.canvaLink;
-    if (!resolvedCanvaLink && activeForm.typeOfContent) {
-      const match = templates.find(
-        t => t.name.toLowerCase() === activeForm.typeOfContent.toLowerCase() ||
-             t.id.toLowerCase() === activeForm.typeOfContent.toLowerCase()
-      );
-      if (match) {
-        resolvedCanvaLink = match.currentLink;
-      }
-    }
+    const normalizedContentType = normalizeContentCategory(activeForm.typeOfContent);
+    const isCultAlias = /^(?:cult|cult\/culture)$/i.test((activeForm.typeOfContent || "").trim());
+    const resolvedCanvaLink = isCultAlias
+      ? getCanvaLinkForContent("Culture")
+      : activeForm.canvaLink || getCanvaLinkForContent(normalizedContentType);
 
     let finalAddedToLayout = activeForm.addedToLayout || activeForm.draftLink || "";
     if (activeForm.draftLink && activeForm.writeup && !activeForm.draftLink.includes("=HYPERLINK")) {
@@ -126,7 +119,9 @@ export default function AssignmentsList({
 
     const finalData: Task = {
       ...activeForm,
+      typeOfContent: normalizedContentType,
       canvaLink: resolvedCanvaLink || activeForm.canvaLink || "",
+      mediumCanvaLink: isOnlinePubmatTask(activeForm.typeOfRelease, activeForm.title) ? activeForm.mediumCanvaLink || MEDIUM_CANVA_LINK : undefined,
       pubmatLink: activeForm.pubmatLink || "",
       draftLink: activeForm.draftLink || "",
       writeup: activeForm.writeup || "",
@@ -172,6 +167,7 @@ export default function AssignmentsList({
           title: baseTitle,
           typeOfRelease: "Issue Article",
           illusLayout: issueAssignee.name,
+          mediumCanvaLink: undefined,
           assigneeEmail: issueAssignee.email,
           assigneeName: issueAssignee.name,
           onlineHandler: "",
@@ -183,6 +179,7 @@ export default function AssignmentsList({
           id: onlineTaskId,
           title: `${baseTitle} (Online Pubmat)`,
           typeOfRelease: "Online Article",
+          mediumCanvaLink: MEDIUM_CANVA_LINK,
           illusLayout: onlineAssignee.name,
           assigneeEmail: onlineAssignee.email,
           assigneeName: onlineAssignee.name,
@@ -507,14 +504,13 @@ export default function AssignmentsList({
                             )}
                           </label>
                           {(() => {
-                            const normalizedContentType = (editForm.typeOfContent || "").trim();
+                            const normalizedContentType = normalizeContentCategory(editForm.typeOfContent);
                             const selectedTemplate = canvaTemplates.find(
                               t => t.name.toLowerCase() === normalizedContentType.toLowerCase() ||
                                    t.id.toLowerCase() === normalizedContentType.toLowerCase() ||
                                    (t.id === "features" && (normalizedContentType.toLowerCase().includes("feat") || normalizedContentType === "31")) ||
                                    (t.id === "opinion" && (normalizedContentType.toLowerCase().includes("op") || normalizedContentType.toLowerCase().includes("persona"))) ||
                                    (t.id === "editorial" && normalizedContentType.toLowerCase().includes("edit")) ||
-                                   (t.id === "cult" && normalizedContentType.toLowerCase().includes("cult")) ||
                                    (t.id === "news" && normalizedContentType.toLowerCase().includes("news"))
                             );
                             const selectValue = selectedTemplate ? selectedTemplate.name : normalizedContentType;
@@ -527,9 +523,10 @@ export default function AssignmentsList({
                                   const match = canvaTemplates.find(
                                     t => t.name.toLowerCase() === val.toLowerCase() || t.id.toLowerCase() === val.toLowerCase()
                                   );
+                                  const contentCategory = normalizeContentCategory(val);
                                   handleFieldsChange({
-                                    typeOfContent: val,
-                                    canvaLink: match ? match.currentLink : (editForm.canvaLink || "")
+                                    typeOfContent: contentCategory,
+                                    canvaLink: match ? match.currentLink : getCanvaLinkForContent(contentCategory) || (editForm.canvaLink || "")
                                   });
                                 }}
                                 className="w-full px-3 py-2 border border-gray-250 dark:border-neutral-700 rounded-lg outline-none focus:ring-1 focus:ring-brand-maroon bg-white dark:bg-neutral-800 text-gray-800 dark:text-neutral-100 font-medium cursor-pointer"

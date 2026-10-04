@@ -8,6 +8,7 @@ import { extractHyperlinkDetails } from "../lib/canvaTemplates";
 import { isUserAssignedToTask } from "../lib/memberUtils";
 import { compressCommentImage, formatCommentDetails, handleBulletKeyDown, MAX_COMMENT_IMAGES, RenderFormattedComment } from "../lib/commentUtils";
 import { getPreferredFirstName } from "../lib/memberUtils";
+import { isOnlinePubmatTask } from "../lib/canvaTemplates";
 import { toISOFormatDate, formatISOToDisplayDate } from "./AssignmentsList";
 import GoogleDocShareWidget from "./GoogleDocShareWidget";
 import { shareGoogleDocWithMember } from "../lib/googleDriveShare";
@@ -56,6 +57,7 @@ export default function TaskDetailsModal({
   const [savingCommentId, setSavingCommentId] = useState<string | null>(null);
   const [commentActionError, setCommentActionError] = useState("");
   const isEditorOrDeputy = currentUserRole === "Layout Editor" || currentUserRole === "Layout Deputy" || currentUserRole === "Online Layout Head";
+  const showMediumCanvaLink = isOnlinePubmatTask(task.typeOfRelease, task.title);
 
   const isAssignedStaffer = (task.illusLayout || "").toLowerCase().includes((currentUserName || "").toLowerCase()) || 
     (currentUserName && currentUserName.toLowerCase().includes((task.illusLayout || "").toLowerCase())) ||
@@ -360,7 +362,7 @@ export default function TaskDetailsModal({
             </div>
 
             {/* Medium Canva Link Editor */}
-            <div className="bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/60 p-3 sm:p-3.5 rounded-xl space-y-2 text-xs">
+            {showMediumCanvaLink && <div className="bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/60 p-3 sm:p-3.5 rounded-xl space-y-2 text-xs">
               <span className="font-bold text-blue-800 dark:text-blue-400 uppercase tracking-wide flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
                 Medium Canva Link
@@ -393,7 +395,7 @@ export default function TaskDetailsModal({
                   />
                 </div>
               )}
-            </div>
+            </div>}
 
             {/* ArtX Document Link Editor */}
             <div className="bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-800/60 p-3 sm:p-3.5 rounded-xl space-y-2 text-xs">

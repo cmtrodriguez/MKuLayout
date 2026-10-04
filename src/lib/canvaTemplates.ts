@@ -30,6 +30,25 @@ export const DEFAULT_CANVA_TEMPLATES: CanvaTemplate[] = [
   { id: "donation-pubmat", name: "Donation Pubmat", category: "Visuals & Layouts", defaultLink: "https://canva.link/donation-pubmat" },
 ];
 
+export const MEDIUM_CANVA_LINK = "https://canva.link/5yuv72zezab85he";
+
+export function normalizeContentCategory(category: string | undefined): string {
+  const value = (category || "").trim();
+  return /^(?:cult|culture|cult\/culture)$/i.test(value) ? "Culture" : value;
+}
+
+export function isOnlinePubmatTask(typeOfRelease: string | undefined, title: string | undefined): boolean {
+  return Boolean(typeOfRelease?.toLowerCase().includes("online") || /\(online pubmat\)$/i.test(title || ""));
+}
+
+export function getCanvaLinkForContent(category: string | undefined): string {
+  const normalized = normalizeContentCategory(category).toLowerCase();
+  if (!normalized) return "";
+  return getPubmatCanvaTemplates().find((template) =>
+    template.name.toLowerCase() === normalized || template.id.toLowerCase() === normalized
+  )?.currentLink || "";
+}
+
 export function getAllCanvaTemplates(): (CanvaTemplate & { currentLink: string })[] {
   let customTemplates: CanvaTemplate[] = [];
   let links: Record<string, string> = {};

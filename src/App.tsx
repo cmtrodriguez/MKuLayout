@@ -22,7 +22,7 @@ import { CanvaDirectory } from "./components/CanvaDirectory";
 import { OFFICIAL_MEMBERS_MAP, getPreferredFirstName, resolveLayoutAssignee, resolveMemberEmail, getEditorDeputyEmails } from "./lib/memberUtils";
 import { AccentTheme, applyAccentCssVars } from "./lib/accentTheme";
 import { seededUuid } from "./lib/seededUuid";
-import { getPubmatCanvaTemplates } from "./lib/canvaTemplates";
+import { getCanvaLinkForContent, getPubmatCanvaTemplates, isOnlinePubmatTask, MEDIUM_CANVA_LINK, normalizeContentCategory } from "./lib/canvaTemplates";
 import { supabase, fetchUserProfileByEmail, fetchTasks, fetchMembers, fetchComments, fetchCalendarEvents, fetchPolls, fetchAnnouncements, fetchNotifications, fetchIssueSheets, upsertTask, deleteTask, upsertMember, createComment, updateComment, upsertCalendarEvent, deleteCalendarEvent, createPoll, updatePollOptionVotes, deletePoll, createNotification, markNotificationRead, createAnnouncement, saveIssueSheets, subscribeToLayoutRealtime } from "./lib/supabase";
 import mkuleImg from "./mkule.png";
 
@@ -199,6 +199,32 @@ export default function App() {
     });
   };
 
+  const applyAssignmentLinkDefaults = (list: Task[]): Task[] => {
+    const normalized = list.map((task) => {
+      const isCultCategory = /^(?:cult|cult\/culture)$/i.test((task.typeOfContent || "").trim());
+      const typeOfContent = normalizeContentCategory(task.typeOfContent);
+      const isCultureCategory = typeOfContent === "Culture";
+      return {
+        ...task,
+        typeOfContent,
+        canvaLink: isCultCategory ? getCanvaLinkForContent("Culture") : task.canvaLink || (isCultureCategory ? getCanvaLinkForContent("Culture") : ""),
+        mediumCanvaLink: isOnlinePubmatTask(task.typeOfRelease, task.title) ? task.mediumCanvaLink || MEDIUM_CANVA_LINK : undefined,
+      };
+    });
+
+    normalized.forEach((task, index) => {
+      const previous = list[index];
+      if (
+        task.typeOfContent !== previous.typeOfContent ||
+        task.canvaLink !== (previous.canvaLink || "") ||
+        task.mediumCanvaLink !== previous.mediumCanvaLink
+      ) {
+        void upsertTask(task);
+      }
+    });
+    return normalized;
+  };
+
   // Modals Visibility
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -282,7 +308,7 @@ export default function App() {
         fetchIssueSheets()
       ]);
 
-      setTasks(tagTasksWithSourceRows(sbTasks, (sbIssueSheets && sbIssueSheets.length > 0) ? sbIssueSheets : issueSheetsRef.current));
+      setTasks(tagTasksWithSourceRows(applyAssignmentLinkDefaults(sbTasks), (sbIssueSheets && sbIssueSheets.length > 0) ? sbIssueSheets : issueSheetsRef.current));
       setMembers(sbMembers);
       setComments(sbComments);
       setEvents(sbEvents);
@@ -301,7 +327,7 @@ export default function App() {
         const response = await fetch("/api/state");
         if (response.ok) {
           const data = await response.json();
-          setTasks(data.tasks || []);
+          setTasks(applyAssignmentLinkDefaults(data.tasks || []));
           setMembers(data.members || []);
           setEvents(data.events || []);
           setPolls(data.polls || []);
@@ -326,7 +352,7 @@ export default function App() {
 
     // Subscribe to realtime updates — no polling needed
     const unsubscribe = subscribeToLayoutRealtime({
-      onTasksChange: async () => { setTasks(tagTasksWithSourceRows(await fetchTasks(), issueSheetsRef.current)); },
+      onTasksChange: async () => { setTasks(tagTasksWithSourceRows(applyAssignmentLinkDefaults(await fetchTasks()), issueSheetsRef.current)); },
       onCommentsChange: async () => { setComments(await fetchComments()); },
       onCalendarChange: async () => { setEvents(await fetchCalendarEvents()); },
       onPollsChange: async () => { setPolls(await fetchPolls()); },
@@ -824,7 +850,7 @@ export default function App() {
       id: `issue-task-${row.id}`,
       title: rowTitle,
       typeOfRelease: "Issue Article",
-      typeOfContent: row.section || "News",
+      typeOfContent: normalizeContentCategory(row.section || "News"),
       writer: row.writer || "Unspecified Writer",
       illusLayout: assignee,
       progress: taskProgress,
@@ -835,7 +861,8 @@ export default function App() {
       commentsCount: 0,
       revisionCount: 0,
       lastUpdated: new Date().toISOString(),
-      canvaLink: "",
+      canvaLink: getCanvaLinkForContent(row.section || "News"),
+      mediumCanvaLink: undefined,
       pubmatLink: "",
       draftLink: "",
       addedToLayout: "",
@@ -894,7 +921,7 @@ export default function App() {
       id: pendingId,
       title: rowTitle,
       typeOfRelease: "Online Article",
-      typeOfContent: issueRowDraft.section || "News",
+      typeOfContent: normalizeContentCategory(issueRowDraft.section || "News"),
       writer: issueRowDraft.writer || "Unspecified Writer",
       illusLayout: resolved.name,
       assigneeEmail: resolved.email,
@@ -909,7 +936,8 @@ export default function App() {
       commentsCount: 0,
       revisionCount: 0,
       lastUpdated: new Date().toISOString(),
-      canvaLink: "",
+      canvaLink: getCanvaLinkForContent(issueRowDraft.section || "News"),
+      mediumCanvaLink: undefined,
       pubmatLink: "",
       draftLink: "",
       addedToLayout: "",
@@ -1087,14 +1115,13 @@ export default function App() {
     const resolvedAssignee = resolveLayoutAssignee(resolvedFormArtist, members);
     // Category names are unique across the directory, so the first name/id
     // match is the template whose link gets attached to the new task.
-    const autoCanvaLink = getPubmatCanvaTemplates().find(
-      (t) => t.name.toLowerCase() === formContentType.toLowerCase() || t.id === formContentType
-    )?.currentLink || "";
+    const normalizedContentType = normalizeContentCategory(formContentType);
+    const autoCanvaLink = getCanvaLinkForContent(normalizedContentType);
     const created: Task = {
       id: crypto.randomUUID(),
       title: formTitle,
       typeOfRelease: formReleaseType,
-      typeOfContent: formContentType,
+      typeOfContent: normalizedContentType,
       writer: formWriter || "Unspecified Writer",
       illusLayout: resolvedFormArtist,
       assigneeEmail: selectedArtist?.email || resolvedAssignee.email || "",
@@ -1108,6 +1135,7 @@ export default function App() {
       revisionCount: 0,
       lastUpdated: new Date().toISOString(),
       canvaLink: autoCanvaLink,
+      mediumCanvaLink: formReleaseType === "Online Article" ? MEDIUM_CANVA_LINK : undefined,
       pubmatLink: formPubmatLink || "",
       draftLink: formDocLink || "",
       addedToLayout: finalAddedToLayout,
@@ -1123,6 +1151,7 @@ export default function App() {
         id: crypto.randomUUID(),
         title: `${formTitle} (Online Pubmat)`,
         typeOfRelease: "Online Article",
+        mediumCanvaLink: MEDIUM_CANVA_LINK,
         isPendingConfirmation: false
       };
       nextTasks = [onlineCompanion, ...nextTasks];

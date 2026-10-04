@@ -6,7 +6,7 @@ import {
   Lock, ShieldAlert, ImagePlus, X, Pencil, Trash2
 } from "lucide-react";
 import { Task, TeamMember, TaskComment, UserRole } from "../types";
-import { extractHyperlinkDetails } from "../lib/canvaTemplates";
+import { extractHyperlinkDetails, isOnlinePubmatTask } from "../lib/canvaTemplates";
 import { compressCommentImage, formatCommentDetails, handleBulletKeyDown, MAX_COMMENT_IMAGES, RenderFormattedComment } from "../lib/commentUtils";
 import { isUserAssignedToTask, resolveMemberEmail, getEditorDeputyEmails } from "../lib/memberUtils";
 import CommentImageAnnotator from "./CommentImageAnnotator";
@@ -334,7 +334,7 @@ export function LayoutStaffDashboard({
                     })()}
 
                     {/* Medium Canva Design Link */}
-                    {(() => {
+                    {isOnlinePubmatTask(task.typeOfRelease, task.title) && (() => {
                       const mediumCanva = extractHyperlinkDetails(task.mediumCanvaLink || "");
                       const hasMediumCanva = mediumCanva.url && mediumCanva.url.startsWith("http");
 

@@ -244,7 +244,7 @@ export default function DashboardOverview({
   const effectiveCompletedTasks = staffStatsPeriod === "semester" ? myCompletedTasks : myMonthCompletedTasks;
 
   const CATEGORIES = [
-    "News", "Features", "Opinion", "Cult", "Editorial", "Front", "MM", "Graphics"
+    "News", "Features", "Opinion", "Culture", "Editorial", "Front", "MM", "Graphics"
   ];
 
   const categoryCounts: Record<string, number> = {};
