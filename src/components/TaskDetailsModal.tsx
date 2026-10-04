@@ -474,9 +474,9 @@ export default function TaskDetailsModal({
                         {com.images && com.images.length > 0 && (
                           <div className="pl-6 grid grid-cols-2 gap-2">
                             {com.images.slice(0, MAX_COMMENT_IMAGES).map((image, index) => (
-                              <a key={`${com.id}-${index}`} href={image} target="_blank" rel="noreferrer" className="block aspect-square overflow-hidden rounded-lg border border-gray-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-900">
-                                <img src={image} alt={`Comment attachment ${index + 1}`} loading="lazy" className="w-full h-full object-cover" />
-                              </a>
+                              <div key={`${com.id}-${index}`} className="aspect-square overflow-hidden rounded-lg border border-gray-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-900">
+                                <CommentImageAnnotator image={image} allowAnnotation={false} label={`View picture ${index + 1}`} />
+                              </div>
                             ))}
                           </div>
                         )}

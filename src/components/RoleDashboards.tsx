@@ -388,9 +388,9 @@ export function LayoutStaffDashboard({
                               {c.images && c.images.length > 0 && (
                                 <div className="pl-6 sm:pl-8 grid grid-cols-2 sm:grid-cols-3 gap-2">
                                   {c.images.slice(0, MAX_COMMENT_IMAGES).map((image, imageIndex) => (
-                                    <a key={`${c.id}-${imageIndex}`} href={image} target="_blank" rel="noreferrer" className="block aspect-square overflow-hidden rounded-lg border border-gray-200 bg-neutral-100">
-                                      <img src={image} alt={`Comment attachment ${imageIndex + 1}`} loading="lazy" className="w-full h-full object-cover" />
-                                    </a>
+                                    <div key={`${c.id}-${imageIndex}`} className="aspect-square overflow-hidden rounded-lg border border-gray-200 bg-neutral-100">
+                                      <CommentImageAnnotator image={image} allowAnnotation={false} label={`View picture ${imageIndex + 1}`} />
+                                    </div>
                                   ))}
                                 </div>
                               )}

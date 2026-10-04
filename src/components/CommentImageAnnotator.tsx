@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Check, Eraser, Pencil, X } from "lucide-react";
+import { Check, Eraser, Expand, Pencil, X } from "lucide-react";
 import { compressCommentImage } from "../lib/commentUtils";
 
 const MARKER_COLORS = [
@@ -12,11 +12,13 @@ const MARKER_COLORS = [
 
 interface CommentImageAnnotatorProps {
   image: string;
-  onSave: (image: string) => void;
+  onSave?: (image: string) => void;
   label?: string;
+  allowAnnotation?: boolean;
 }
 
-export default function CommentImageAnnotator({ image, onSave, label = "Annotate picture" }: CommentImageAnnotatorProps) {
+export default function CommentImageAnnotator({ image, onSave, label, allowAnnotation = true }: CommentImageAnnotatorProps) {
+  const buttonLabel = label || (allowAnnotation ? "Annotate picture" : "View picture");
   const [isOpen, setIsOpen] = useState(false);
   const [activeColor, setActiveColor] = useState(MARKER_COLORS[0].value);
   const [isSaving, setIsSaving] = useState(false);
@@ -115,7 +117,7 @@ export default function CommentImageAnnotator({ image, onSave, label = "Annotate
         canvas.toBlob((result) => result ? resolve(result) : reject(new Error("Could not export this picture.")), "image/jpeg", 0.88);
       });
       const image = await compressCommentImage(new File([blob], "annotated-picture.jpg", { type: "image/jpeg" }));
-      onSave(image);
+      onSave?.(image);
       setIsOpen(false);
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "Could not save this picture.");
@@ -130,22 +132,22 @@ export default function CommentImageAnnotator({ image, onSave, label = "Annotate
         type="button"
         onClick={() => setIsOpen(true)}
         className="relative block w-full h-full group cursor-pointer"
-        aria-label={label}
-        title={label}
+        aria-label={buttonLabel}
+        title={buttonLabel}
       >
         <img src={image} alt="" className="w-full h-full object-cover" />
         <span className="absolute inset-0 bg-black/0 group-hover:bg-black/20 group-focus-visible:bg-black/20 transition-colors" />
         <span className="absolute right-1 bottom-1 p-1 rounded-full bg-neutral-950/80 text-white shadow">
-            <Pencil className="w-3.5 h-3.5" />
+          {allowAnnotation ? <Pencil className="w-3.5 h-3.5" /> : <Expand className="w-3.5 h-3.5" />}
         </span>
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 z-[80] bg-neutral-950/95 flex flex-col" role="dialog" aria-modal="true" aria-label="Draw on picture">
+        <div className="fixed inset-0 z-[80] bg-neutral-950/95 flex flex-col" role="dialog" aria-modal="true" aria-label={allowAnnotation ? "Draw on picture" : "View picture"}>
           <div className="h-14 sm:h-16 px-3 sm:px-5 flex items-center justify-between gap-3 border-b border-white/10 text-white shrink-0">
             <div className="flex items-center gap-2 min-w-0">
-              <Pencil className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span className="text-sm font-semibold truncate">Mark up picture</span>
+              {allowAnnotation ? <Pencil className="w-4 h-4 text-emerald-400 shrink-0" /> : <Expand className="w-4 h-4 text-emerald-400 shrink-0" />}
+              <span className="text-sm font-semibold truncate">{allowAnnotation ? "Mark up picture" : "Picture"}</span>
             </div>
             <button type="button" onClick={() => setIsOpen(false)} className="p-2 hover:bg-white/10 rounded-lg cursor-pointer" aria-label="Close annotation">
               <X className="w-5 h-5" />
@@ -153,22 +155,26 @@ export default function CommentImageAnnotator({ image, onSave, label = "Annotate
           </div>
 
           <div className="flex-1 min-h-0 p-2 sm:p-5 flex items-center justify-center overflow-hidden">
-            <div className="relative max-w-full max-h-full flex items-center justify-center">
-              <img ref={sourceRef} src={image} alt="Picture being annotated" className="max-w-full max-h-[calc(100dvh-150px)] object-contain invisible" />
-              <canvas
-                ref={canvasRef}
-                onPointerDown={startDrawing}
-                onPointerMove={draw}
-                onPointerUp={stopDrawing}
-                onPointerCancel={stopDrawing}
-                onPointerLeave={stopDrawing}
-                className="absolute inset-0 w-full h-full object-contain touch-none cursor-crosshair"
-                aria-label="Picture drawing surface"
-              />
-            </div>
+            {allowAnnotation ? (
+              <div className="relative max-w-full max-h-full flex items-center justify-center">
+                <img ref={sourceRef} src={image} alt="Picture being annotated" className="max-w-full max-h-[calc(100dvh-150px)] object-contain invisible" />
+                <canvas
+                  ref={canvasRef}
+                  onPointerDown={startDrawing}
+                  onPointerMove={draw}
+                  onPointerUp={stopDrawing}
+                  onPointerCancel={stopDrawing}
+                  onPointerLeave={stopDrawing}
+                  className="absolute inset-0 w-full h-full object-contain touch-none cursor-crosshair"
+                  aria-label="Picture drawing surface"
+                />
+              </div>
+            ) : (
+              <img src={image} alt="Full-size comment attachment" className="max-w-full max-h-full object-contain" />
+            )}
           </div>
 
-          <div className="shrink-0 border-t border-white/10 bg-neutral-900/95 px-3 py-2.5 sm:px-5 sm:py-3 flex flex-wrap items-center justify-between gap-3">
+          {allowAnnotation && <div className="shrink-0 border-t border-white/10 bg-neutral-900/95 px-3 py-2.5 sm:px-5 sm:py-3 flex flex-wrap items-center justify-between gap-3">
             {saveError && <p role="alert" className="basis-full text-xs text-rose-300">{saveError}</p>}
             <div className="flex items-center gap-2" role="group" aria-label="Marker color">
               {MARKER_COLORS.map((color) => (
@@ -194,7 +200,7 @@ export default function CommentImageAnnotator({ image, onSave, label = "Annotate
                 <Check className="w-4 h-4" /> {isSaving ? "Saving…" : "Save"}
               </button>
             </div>
-          </div>
+          </div>}
         </div>
       )}
     </>
